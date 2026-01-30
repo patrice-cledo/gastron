@@ -1,0 +1,244 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user owns the resource
+    function isOwner(userId) {
+      return isAuthenticated() && userId != null && request.auth.uid == userId;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId);
+    }
+    
+    // Recipes collection
+    match /recipes/{recipeId} {
+      // Users can read:
+      // - Their own recipes (public or private)
+      // - Public recipes (isPublic == true)
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        (resource.data.isPublic == true && 'isPublic' in resource.data)
+      );
+      
+      // Users can create recipes (must set userId and isPublic)
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid &&
+        'isPublic' in request.resource.data;
+      
+      // Users can update/delete their own recipes
+      // Can change isPublic to toggle public/private
+      allow update: if isOwner(resource.data.userId) &&
+        request.resource.data.userId == resource.data.userId; // Prevent changing userId
+      
+      allow delete: if isOwner(resource.data.userId);
+    }
+    
+    // Meal Plans collection
+    match /mealPlans/{planId} {
+      allow read: if isOwner(resource.data.userId);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isOwner(resource.data.userId);
+      
+      // Prevent modification of system fields
+      allow update: if isOwner(resource.data.userId) && 
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['version']);
+    }
+    
+    // Meal Plan Entries collection
+    match /mealPlanEntries/{entryId} {
+      allow read: if isAuthenticated();
+      
+      // Verify planId exists and user owns the plan
+      function ownsPlan() {
+        return isAuthenticated() && 
+          request.resource.data.planId != null &&
+          exists(/databases/$(database)/documents/mealPlans/$(request.resource.data.planId)) &&
+          get(/databases/$(database)/documents/mealPlans/$(request.resource.data.planId)).data.userId == request.auth.uid;
+      }
+      
+      allow create: if ownsPlan();
+      
+      allow update, delete: if isAuthenticated() && 
+        resource.data.planId != null &&
+        exists(/databases/$(database)/documents/mealPlans/$(resource.data.planId)) &&
+        get(/databases/$(database)/documents/mealPlans/$(resource.data.planId)).data.userId == request.auth.uid;
+    }
+    
+    // Grocery Lists collection
+    match /groceryLists/{listId} {
+      allow read: if isOwner(resource.data.userId);
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isOwner(resource.data.userId);
+      
+      // Protect system fields from client writes
+      allow update: if isOwner(resource.data.userId) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['computedAt', 'version']);
+    }
+    
+    // Grocery Items collection (if stored separately)
+    match /groceryItems/{itemId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      
+      // Users can update/delete items they own (via list ownership)
+      allow update, delete: if isAuthenticated();
+    }
+    
+    // User Overrides collection
+    match /userOverrides/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId);
+    }
+    
+    // Categories collection
+    match /categories/{categoryId} {
+      // All authenticated users can read categories
+      allow read: if isAuthenticated();
+      
+      // Users can create custom categories
+      allow create: if isAuthenticated() && request.resource.data.userCustom == true;
+      
+      // Users can only update/delete their own custom categories
+      allow update, delete: if isAuthenticated() && 
+        resource.data.userCustom == true &&
+        resource.data.userId == request.auth.uid;
+    }
+    
+    // Imports collection
+    match /imports/{importId} {
+      allow read: if isAuthenticated() && 
+        resource != null &&
+        resource.data != null &&
+        'userId' in resource.data &&
+        resource.data.userId != null && 
+        resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      // Only system can update (via Cloud Functions)
+      allow update: if false; // Cloud Functions use admin SDK, bypass rules
+      allow delete: if isAuthenticated() && 
+        resource != null &&
+        resource.data != null &&
+        'userId' in resource.data &&
+        resource.data.userId != null && 
+        resource.data.userId == request.auth.uid;
+    }
+    
+    // Recipe Drafts collection
+    match /recipeDrafts/{draftId} {
+      allow read: if isAuthenticated() && 
+        resource != null &&
+        resource.data != null &&
+        'userId' in resource.data &&
+        resource.data.userId != null && 
+        resource.data.userId == request.auth.uid;
+      allow create: if false; // Only Cloud Functions can create
+      allow update: if isAuthenticated() && 
+        resource != null &&
+        resource.data != null &&
+        'userId' in resource.data &&
+        resource.data.userId != null && 
+        resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated() && 
+        resource != null &&
+        resource.data != null &&
+        'userId' in resource.data &&
+        resource.data.userId != null && 
+        resource.data.userId == request.auth.uid;
+    }
+    
+    // OTP Challenges collection
+    // Only Cloud Functions can create/update (via admin SDK)
+    // Users can read their own challenges (for status checks)
+    match /otpChallenges/{challengeId} {
+      // Users can read challenges for their email (for status)
+      allow read: if isAuthenticated() && 
+        resource.data.email == request.auth.token.email;
+      // Only Cloud Functions can create/update/delete (via admin SDK)
+      allow write: if false;
+    }
+    
+    // Reviews collection
+    match /reviews/{reviewId} {
+      // Users can read any review (for viewing recipe reviews)
+      allow read: if isAuthenticated();
+      
+      // Users can create reviews (must set userId and recipeId)
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.rating >= 1 &&
+        request.resource.data.rating <= 5;
+      
+      // Users can update/delete their own reviews
+      allow update: if isOwner(resource.data.userId) &&
+        request.resource.data.userId == resource.data.userId && // Prevent changing userId
+        request.resource.data.rating >= 1 &&
+        request.resource.data.rating <= 5;
+      
+      allow delete: if isOwner(resource.data.userId);
+    }
+    
+    // User Cooked Recipes collection
+    match /userCookedRecipes/{cookedId} {
+      // Users can only read/write their own cooked recipes
+      // Cooked ID format: {userId}_{recipeId}
+      allow read: if isAuthenticated() && 
+        (resource != null && resource.data != null && resource.data.userId == request.auth.uid);
+      
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid &&
+        cookedId.matches(request.auth.uid + '_.*');
+      
+      allow update: if isAuthenticated() && 
+        resource != null &&
+        resource.data != null &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == resource.data.userId; // Prevent changing userId
+      
+      allow delete: if isAuthenticated() && 
+        resource != null &&
+        resource.data != null &&
+        resource.data.userId == request.auth.uid;
+    }
+    
+    // User Recipe Notes collection
+    match /userRecipeNotes/{noteId} {
+      // Users can only read/write their own notes
+      // Note ID format: {userId}_{recipeId}
+      // Check if noteId starts with user's UID
+      function isOwnNoteId() {
+        return isAuthenticated() && noteId.matches(request.auth.uid + '_.*');
+      }
+      
+      // Allow read if noteId matches user's UID format and document exists with matching userId
+      allow read: if isAuthenticated() && (
+        isOwnNoteId() && (
+          !exists(/databases/$(database)/documents/userRecipeNotes/$(noteId)) ||
+          (resource != null && resource.data != null && resource.data.userId == request.auth.uid)
+        )
+      );
+      
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid &&
+        isOwnNoteId();
+      
+      allow update: if isAuthenticated() && 
+        resource != null &&
+        resource.data != null &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == resource.data.userId; // Prevent changing userId
+      
+      allow delete: if isAuthenticated() && 
+        resource != null &&
+        resource.data != null &&
+        resource.data.userId == request.auth.uid;
+    }
+  }
+}

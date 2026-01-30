@@ -1,0 +1,36 @@
+// Ingredient sprite code mapping
+// This replaces the JSON file to avoid Metro bundler issues
+
+export const ingredientMapping: Record<string, string> = {
+  A1: 'shrimp',
+  A2: 'lemon_slice',
+  A3: 'drumstick',
+  A6: 'steak',
+  A7: 'cherry_tomatoes_cluster',
+  B0: 'avocado_half',
+  B1: 'potato_whole',
+  B2: 'garlic_bulb',
+  B3: 'onion_half',
+  B4: 'carrot_whole',
+  B5: 'tomato_half',
+  B6: 'bell_pepper_slice',
+  B9: 'mushroom_cap',
+  '10': 'broccoli_head',
+  '12': 'bread_slice',
+  '13': 'pizza_slice',
+  '15': 'taco_shell',
+  '16': 'bell_pepper_ring',
+  '17': 'whole_potato',
+  '18': 'potato_wedge',
+  '19': 'sliced_potato',
+  '20': 'spaghetti_nest',
+  '21': 'basil_leaf',
+  '22': 'cheese_wedge',
+  '26': 'tomato_slices',
+  '29': 'olives',
+  E1: 'butter_pat',
+  E2: 'salt_sprinkle',
+  E6: 'jar',
+  E7: 'oil_drop',
+};
+

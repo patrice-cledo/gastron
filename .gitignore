@@ -15,6 +15,9 @@ pnpm-debug.log*
 *.pem
 *.p8
 
+# Local backups (e.g. nested repos removed)
+.git-backups/
+
 # Expo / React Native
 .expo/
 .expo-shared/

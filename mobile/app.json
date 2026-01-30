@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "Gastrons",
+    "slug": "gastrons",
+    "version": "1.0.0",
+    "sdkVersion": "54.0.0",
+    "main": "index.js",
+    "orientation": "portrait",
+    "icon": "./assets/icons/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/icons/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cookthispage.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icons/adaptive-icon.png",
+        "backgroundColor": "#F5F5F0"
+      },
+      "package": "com.cookthispage.app"
+    },
+    "web": {
+      "favicon": "./assets/icons/favicon.png"
+    },
+    "scheme": "gastrons",
+    "plugins": [
+      "@react-native-community/datetimepicker",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          },
+          "ios": {
+            "deploymentTarget": "15.1"
+          }
+        }
+      ]
+    ]
+  }
+}

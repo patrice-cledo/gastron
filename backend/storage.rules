@@ -1,0 +1,77 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user owns the resource
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Recipe images: users can upload to their own recipe folder
+    // Path: recipes/{userId}/{filename}
+    match /recipes/{userId}/{fileName} {
+      // Users can read any recipe image (for viewing recipes)
+      allow read: if isAuthenticated();
+      
+      // Users can only write (upload) to their own recipe folder
+      allow write: if isOwner(userId) && 
+        request.resource.size < 10 * 1024 * 1024 && // 10MB max file size
+        request.resource.contentType.matches('image/.*'); // Only images
+    }
+    
+    // Photo import images: users can upload to their own import folder
+    // Path: imports/{userId}/{importId}.jpg
+    match /imports/{userId}/{fileName} {
+      // Users can read their own import images (for preview)
+      allow read: if isOwner(userId);
+      
+      // Users can only write (upload) to their own import folder
+      allow write: if isOwner(userId) && 
+        request.resource.size < 6 * 1024 * 1024 && // 6MB max file size
+        request.resource.contentType.matches('image/.*'); // Only images
+      
+      // Users can delete their own import images (for cleanup on error/cancel)
+      allow delete: if isOwner(userId);
+    }
+    
+    // Profile pictures: users can upload to their own profile folder
+    // Path: profile-pictures/{userId}/{filename}
+    match /profile-pictures/{userId}/{fileName} {
+      // Users can read any profile picture (for viewing profiles)
+      allow read: if isAuthenticated();
+      
+      // Users can only write (upload) to their own profile folder
+      allow write: if isOwner(userId) && 
+        request.resource.size < 5 * 1024 * 1024 && // 5MB max file size
+        request.resource.contentType.matches('image/.*'); // Only images
+      
+      // Users can delete their own profile pictures
+      allow delete: if isOwner(userId);
+    }
+    
+    // Review images: users can upload to their own review folder
+    // Path: reviews/{userId}/{recipeId}/{filename}
+    match /reviews/{userId}/{recipeId}/{fileName} {
+      // Users can read any review image (for viewing reviews)
+      allow read: if isAuthenticated();
+      
+      // Users can only write (upload) to their own review folder
+      allow write: if isOwner(userId) && 
+        request.resource.size < 10 * 1024 * 1024 && // 10MB max file size
+        request.resource.contentType.matches('image/.*'); // Only images
+      
+      // Users can delete their own review images
+      allow delete: if isOwner(userId);
+    }
+    
+    // Deny all other paths by default
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

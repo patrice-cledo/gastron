@@ -1,0 +1,22 @@
+{
+  "name": "gastrons-backend",
+  "version": "1.0.0",
+  "description": "Backend for Gastrons app",
+  "scripts": {
+    "init-categories": "ts-node scripts/initDefaultCategories.ts",
+    "build": "cd functions && npm run build",
+    "firebase": "npx firebase-tools",
+    "firebase:login": "npx firebase-tools login",
+    "firebase:init": "npx firebase-tools init",
+    "firebase:deploy": "npx firebase-tools deploy",
+    "firebase:emulators": "npx firebase-tools emulators:start --only functions,firestore,auth,storage",
+    "firebase:emulators:all": "npx firebase-tools emulators:start"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.0",
+    "@types/node": "^20.0.0",
+    "firebase-tools": "^13.0.0"
+  },
+  "private": true
+}
