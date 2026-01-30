@@ -1,0 +1,40 @@
+# OS / editor
+.DS_Store
+.vscode/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Env / secrets
+.env
+.env.*
+*.pem
+*.p8
+
+# Expo / React Native
+.expo/
+.expo-shared/
+
+# iOS
+Pods/
+Podfile.lock
+*.xcworkspace
+xcuserdata/
+DerivedData/
+build/
+
+# Android
+.gradle/
+local.properties
+android/app/build/
+android/build/
+
+# TypeScript / build outputs
+dist/
+lib/
+coverage/
+

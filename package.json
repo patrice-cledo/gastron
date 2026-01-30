@@ -1,0 +1,22 @@
+{
+  "name": "gastrons",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Gastrons monorepo (mobile app + backend)",
+  "scripts": {
+    "mobile:start": "npm --prefix mobile run start",
+    "mobile:ios": "npm --prefix mobile run ios",
+    "mobile:android": "npm --prefix mobile run android",
+    "mobile:web": "npm --prefix mobile run web",
+    "mobile:lint": "npm --prefix mobile run lint",
+    "mobile:type-check": "npm --prefix mobile run type-check",
+
+    "backend:build": "npm --prefix backend run build",
+    "backend:emulators": "npm --prefix backend run firebase:emulators",
+    "backend:deploy": "npm --prefix backend run firebase:deploy",
+
+    "lint": "npm run mobile:lint",
+    "type-check": "npm run mobile:type-check"
+  }
+}
+
