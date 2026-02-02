@@ -308,7 +308,7 @@ const InspirationScreen: React.FC = () => {
       ) : isLoading ? (
         /* Loading State */
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FFD700" />
+          <ActivityIndicator size="large" color={theme.colors.accent} />
           <Text style={styles.loadingText}>Finding perfect matches...</Text>
         </View>
       ) : (
@@ -636,7 +636,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     justifyContent: 'center',
     alignItems: 'center',
   },

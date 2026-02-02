@@ -22,7 +22,7 @@ export const FloatingCreateButton: React.FC = () => {
       onPress={showImportModal}
       activeOpacity={0.8}
     >
-      <Ionicons name="add" size={28} color="#FFFFFF" />
+      <Ionicons name="add" size={28} color={theme.colors.black} />
     </TouchableOpacity>
   );
 };

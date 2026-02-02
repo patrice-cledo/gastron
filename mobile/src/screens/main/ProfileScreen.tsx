@@ -600,7 +600,7 @@ const ProfileScreen: React.FC = () => {
                         styles.bar,
                         {
                           height: value > 0 ? (value / maxValue) * (chartHeight - 40) : 0,
-                          backgroundColor: category === 'MEAT' ? '#FF6B6B' : '#FFD700',
+                          backgroundColor: category === 'MEAT' ? '#FF6B6B' : '#CEEC2C',
                         },
                       ]}
                     />
@@ -889,7 +889,7 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
   freeTrialButton: {
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 20,

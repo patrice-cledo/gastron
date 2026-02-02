@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#1A1A1A',
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 4,
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
   },
   ctaButton: {
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 24,

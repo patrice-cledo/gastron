@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   progressBarFilled: {
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
   },
   progressBarEmpty: {
     backgroundColor: '#E0E0E0',
@@ -216,15 +216,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 20,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderWidth: 0.5,
+    borderColor: '#F0F0F0',
     marginBottom: 12,
     width: BUTTON_WIDTH,
     justifyContent: 'center',
   },
   sourceButtonSelected: {
-    backgroundColor: '#FFD700',
-    borderColor: '#FFD700',
+    backgroundColor: '#E0EB60',
+    borderColor: '#E0EB60',
   },
   sourceText: {
     fontSize: 13,
@@ -235,6 +235,7 @@ const styles = StyleSheet.create({
   },
   sourceTextSelected: {
     fontWeight: '600',
+    color: '#1A1A1A',
   },
   footer: {
     position: 'absolute',
@@ -249,8 +250,8 @@ const styles = StyleSheet.create({
     borderTopColor: '#F0F0F0',
   },
   nextButton: {
-    backgroundColor: '#FFD700',
-    borderRadius: 12,
+    backgroundColor: '#CEEC2C',
+    borderRadius: 999,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',

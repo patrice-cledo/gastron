@@ -120,7 +120,7 @@ const ShareExtensionInstructionsScreen: React.FC<ShareExtensionInstructionsScree
                     <View style={styles.shareSheetAppIconAdd}>
                       <Ionicons name="add-circle" size={20} color="#34C759" />
                     </View>
-                    <View style={[styles.shareSheetAppIcon, { backgroundColor: '#FFD700' }]}>
+                    <View style={[styles.shareSheetAppIcon, { backgroundColor: '#CEEC2C' }]}>
                       <Ionicons name="document-text" size={20} color="#000000" />
                     </View>
                   </View>

@@ -71,7 +71,7 @@ const GetStartedScreen: React.FC<GetStartedScreenProps> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
   },
   content: {
     flex: 1,

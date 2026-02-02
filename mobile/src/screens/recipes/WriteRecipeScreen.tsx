@@ -174,7 +174,7 @@ const DraggableInstructionItem: React.FC<DraggableInstructionItemProps> = ({
                 );
               }}
             >
-                <Ionicons name="camera-outline" size={20} color="#FF6B35" />
+                <Ionicons name="camera-outline" size={20} color="#1A5B3D" />
             </TouchableOpacity>
           ) : (
             <View style={styles.instructionImageThumbnail}>
@@ -1556,7 +1556,7 @@ const WriteRecipeScreen: React.FC<WriteRecipeScreenProps> = ({ route }) => {
         </TouchableOpacity>
         <TouchableOpacity onPress={handleSave} disabled={isSaving}>
           {isSaving ? (
-            <ActivityIndicator size="small" color="#FF6B35" />
+            <ActivityIndicator size="small" color="#1A5B3D" />
           ) : (
             <Text style={styles.saveButton}>Save</Text>
           )}
@@ -1597,7 +1597,7 @@ const WriteRecipeScreen: React.FC<WriteRecipeScreenProps> = ({ route }) => {
               {imageUri ? (
                 <Image source={{ uri: imageUri }} style={styles.imagePreview} />
               ) : (
-                <Ionicons name="camera-outline" size={24} color="#FF6B35" />
+                <Ionicons name="camera-outline" size={24} color="#1A5B3D" />
               )}
             </TouchableOpacity>
           </View>
@@ -1614,7 +1614,7 @@ const WriteRecipeScreen: React.FC<WriteRecipeScreenProps> = ({ route }) => {
                   ? selectedCollections.join(', ') 
                   : 'None'}
               </Text>
-              <Ionicons name="chevron-forward" size={20} color="#FF6B35" />
+              <Ionicons name="chevron-forward" size={20} color="#1A5B3D" />
             </View>
           </TouchableOpacity>
 
@@ -1645,7 +1645,7 @@ const WriteRecipeScreen: React.FC<WriteRecipeScreenProps> = ({ route }) => {
             }}
           >
             <Text style={styles.rowLabel}>Info</Text>
-            <Ionicons name="chevron-forward" size={20} color="#FF6B35" />
+            <Ionicons name="chevron-forward" size={20} color="#1A5B3D" />
           </TouchableOpacity>
 
           {/* Nutrition */}
@@ -1667,7 +1667,7 @@ const WriteRecipeScreen: React.FC<WriteRecipeScreenProps> = ({ route }) => {
             }}
           >
             <Text style={styles.rowLabel}>Nutrition</Text>
-            <Ionicons name="chevron-forward" size={20} color="#FF6B35" />
+            <Ionicons name="chevron-forward" size={20} color="#1A5B3D" />
           </TouchableOpacity>
         </View>
 
@@ -1719,7 +1719,7 @@ const WriteRecipeScreen: React.FC<WriteRecipeScreenProps> = ({ route }) => {
             style={styles.addButton}
             onPress={handleAddIngredient}
           >
-            <Ionicons name="add-circle-outline" size={20} color="#FF6B35" />
+            <Ionicons name="add-circle-outline" size={20} color="#1A5B3D" />
             <Text style={styles.addButtonText}>Add ingredient</Text>
           </TouchableOpacity>
         </View>
@@ -1750,7 +1750,7 @@ const WriteRecipeScreen: React.FC<WriteRecipeScreenProps> = ({ route }) => {
             style={styles.addButton}
             onPress={handleAddInstruction}
           >
-            <Ionicons name="add-circle-outline" size={20} color="#FF6B35" />
+            <Ionicons name="add-circle-outline" size={20} color="#1A5B3D" />
             <Text style={styles.addButtonText}>Add step</Text>
           </TouchableOpacity>
         </View>
@@ -1814,7 +1814,7 @@ const WriteRecipeScreen: React.FC<WriteRecipeScreenProps> = ({ route }) => {
                     );
                   }}
                 >
-                  <Ionicons name="camera-outline" size={20} color="#FF6B35" />
+                  <Ionicons name="camera-outline" size={20} color="#1A5B3D" />
                 </TouchableOpacity>
               ) : (
                 <View style={styles.instructionImageThumbnail}>
@@ -1850,7 +1850,7 @@ const WriteRecipeScreen: React.FC<WriteRecipeScreenProps> = ({ route }) => {
             style={styles.addButton}
             onPress={handleAddEquipment}
           >
-            <Ionicons name="add-circle-outline" size={20} color="#FF6B35" />
+            <Ionicons name="add-circle-outline" size={20} color="#1A5B3D" />
             <Text style={styles.addButtonText}>Add equipment</Text>
           </TouchableOpacity>
         </View>
@@ -1919,8 +1919,8 @@ const WriteRecipeScreen: React.FC<WriteRecipeScreenProps> = ({ route }) => {
                 style={styles.createCollectionButton}
                 onPress={() => setShowCreateCollection(true)}
               >
-                <Ionicons name="add-circle-outline" size={20} color="#FF6B35" />
-                <Text style={styles.createCollectionButtonText}>Create new collection</Text>
+                <Ionicons name="add-circle-outline" size={20} color="#1A5B3D" />
+                <Text style={styles.createCollectionButtonText}>Create new cookbook</Text>
               </TouchableOpacity>
             </>
           ) : (
@@ -1991,7 +1991,7 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     fontSize: 16,
-    color: '#FF6B35',
+    color: '#1A5B3D',
     fontWeight: '600',
   },
   scrollView: {
@@ -2093,7 +2093,7 @@ const styles = StyleSheet.create({
   },
   reorderButtonText: {
     fontSize: 16,
-    color: '#FF6B35',
+    color: '#1A5B3D',
     fontWeight: '600',
   },
   textInput: {
@@ -2120,7 +2120,7 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: 16,
-    color: '#FF6B35',
+    color: '#1A5B3D',
     fontWeight: '500',
   },
   listItemContainer: {
@@ -2243,7 +2243,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   timerModalButtonSave: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#1A5B3D',
   },
   timerModalButtonSaveText: {
     fontSize: 16,
@@ -2343,7 +2343,7 @@ const styles = StyleSheet.create({
   },
   dragOverItem: {
     borderTopWidth: 2,
-    borderTopColor: '#FF6B35',
+    borderTopColor: '#1A5B3D',
   },
   deleteButton: {
     width: 40,
@@ -2383,8 +2383,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   checkboxSelected: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
+    backgroundColor: '#1A5B3D',
+    borderColor: '#1A5B3D',
   },
   collectionOptionText: {
     flex: 1,
@@ -2393,7 +2393,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   collectionOptionTextSelected: {
-    color: '#FF6B35',
+    color: '#1A5B3D',
     fontWeight: '600',
   },
   createCollectionButton: {
@@ -2406,7 +2406,7 @@ const styles = StyleSheet.create({
   },
   createCollectionButtonText: {
     fontSize: 16,
-    color: '#FF6B35',
+    color: '#1A5B3D',
     fontWeight: '500',
   },
   createCollectionHeader: {
@@ -2439,7 +2439,7 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0DA',
   },
   createCollectionSaveButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#C6ED6E',
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
@@ -2450,7 +2450,7 @@ const styles = StyleSheet.create({
   },
   createCollectionSaveButtonText: {
     fontSize: 16,
-    color: '#FFFFFF',
+    color: '#1A1A1A',
     fontWeight: '600',
   },
   createCollectionSaveButtonTextDisabled: {

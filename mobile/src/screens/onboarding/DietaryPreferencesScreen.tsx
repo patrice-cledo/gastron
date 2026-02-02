@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   progressBarFilled: {
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
   },
   progressBarEmpty: {
     backgroundColor: '#E0E0E0',
@@ -312,13 +312,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 12,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderWidth: 0.5,
+    borderColor: '#F0F0F0',
     minHeight: 60,
   },
   optionButtonSelected: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
+    backgroundColor: '#E0EB60',
+    borderColor: '#E0EB60',
   },
   optionIcon: {
     fontSize: 20,
@@ -339,15 +339,15 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 16,
     borderRadius: 12,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#E0EB60',
     borderWidth: 1,
-    borderColor: '#FFD700',
+    borderColor: '#E0EB60',
     width: '100%',
     minHeight: 60,
   },
   noPreferenceButtonSelected: {
-    backgroundColor: '#FFD700',
-    borderColor: '#FFD700',
+    backgroundColor: '#E0EB60',
+    borderColor: '#E0EB60',
   },
   noPreferenceText: {
     fontSize: 16,
@@ -368,8 +368,8 @@ const styles = StyleSheet.create({
     borderTopColor: '#F0F0F0',
   },
   nextButton: {
-    backgroundColor: '#FFD700',
-    borderRadius: 12,
+    backgroundColor: '#CEEC2C',
+    borderRadius: 999,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',

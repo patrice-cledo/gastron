@@ -201,7 +201,7 @@ const CollectionCreatedScreen: React.FC<CollectionCreatedScreenProps> = ({ navig
               style={[
                 styles.confetti,
                 {
-                  backgroundColor: ['#FFD700', '#FF6B6B', '#4ECDC4', '#FFE66D', '#FF6B9D'][i % 5],
+                  backgroundColor: ['#CEEC2C', '#FF6B6B', '#4ECDC4', '#FFE66D', '#FF6B9D'][i % 5],
                   left: `${(i * 5) % 100}%`,
                   top: `${(i * 7) % 100}%`,
                 },

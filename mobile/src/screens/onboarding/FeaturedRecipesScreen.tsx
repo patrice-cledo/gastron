@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   progressBarFilled: {
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
   },
   progressBarEmpty: {
     backgroundColor: '#E0E0E0',

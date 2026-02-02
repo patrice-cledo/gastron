@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   cancelSubscriptionButton: {
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',

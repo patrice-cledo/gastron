@@ -235,8 +235,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   optionButtonSelected: {
-    backgroundColor: '#FFD700',
-    borderColor: '#FFD700',
+    backgroundColor: '#E0EB60',
+    borderColor: '#E0EB60',
   },
   optionText: {
     fontSize: 14,

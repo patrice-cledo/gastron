@@ -1038,11 +1038,11 @@ const MealPlanScreen: React.FC = () => {
                   </Text>
                   <View style={styles.dayActions}>
                     <TouchableOpacity
-                      style={styles.addButton}
+                      style={[styles.addButton, { backgroundColor: theme.colors.gastronButton }]}
                       onPress={() => handleAddMeal(dayKey, date)}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="add" size={16} color="#FFFFFF" />
+                      <Ionicons name="add" size={16} color={theme.colors.black} />
                     </TouchableOpacity>
                     {hasPlans && (
                       <TouchableOpacity
@@ -2017,7 +2017,6 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#FFB88C',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 8,
@@ -2644,8 +2643,8 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   editDayButtonSelected: {
-    backgroundColor: '#FFD700',
-    borderColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
+    borderColor: '#CEEC2C',
   },
   editDayButtonText: {
     fontSize: 14,

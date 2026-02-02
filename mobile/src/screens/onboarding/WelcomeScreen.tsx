@@ -154,7 +154,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
                       styles.progressBarFill,
                       {
                         width: '100%',
-                        backgroundColor: '#FFD700',
+                        backgroundColor: '#CEEC2C',
                       },
                     ]}
                   />
@@ -164,7 +164,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
                       styles.progressBarFill,
                       {
                         width: progressWidth,
-                        backgroundColor: '#FFD700',
+                        backgroundColor: '#CEEC2C',
                       },
                     ]}
                   />
@@ -259,8 +259,8 @@ const getStyles = (theme: any) => StyleSheet.create({
   progressContainer: {
     flexDirection: 'row',
     paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 12,
+    paddingTop: 12,
+    paddingBottom: 8,
     gap: 8,
   },
   progressBarWrapper: {
@@ -278,8 +278,8 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 60,
+    paddingTop: 12,
+    paddingBottom: 48,
     flexGrow: 1,
   },
   logoContainer: {
@@ -301,9 +301,9 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   slidesContainer: {
     width: SLIDE_WIDTH,
-    height: 650,
+    height: 580,
     overflow: 'hidden',
-    marginBottom: 48,
+    marginBottom: 32,
     alignSelf: 'center',
   },
   slidesWrapper: {
@@ -322,35 +322,33 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   headlineContainer: {
     alignItems: 'flex-start',
-    marginBottom: 32,
-    minHeight: 100,
+    marginBottom: 20,
     width: SLIDE_WIDTH,
     paddingHorizontal: 0,
-    overflow: 'hidden',
   },
   headline: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
     color: '#1A1A1A',
     textAlign: 'left',
-    marginBottom: 16,
-    lineHeight: 36,
+    marginBottom: 10,
+    lineHeight: 30,
     paddingHorizontal: 0,
     width: SLIDE_WIDTH,
   },
   subHeadline: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '400',
     color: '#4A4A4A',
     textAlign: 'left',
-    lineHeight: 24,
+    lineHeight: 22,
     paddingHorizontal: 0,
     width: SLIDE_WIDTH,
   },
   imageContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    height: 420,
+    height: 380,
     width: '100%',
     borderRadius: 16,
     overflow: 'visible',
@@ -373,11 +371,11 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   buttonContainer: {
     width: '100%',
-    marginTop: -20,
-    marginBottom: 60,
+    marginTop: -8,
+    marginBottom: 40,
   },
   loginLinkContainer: {
-    marginTop: 20,
+    marginTop: 16,
     alignItems: 'center',
   },
   loginLinkText: {
@@ -387,7 +385,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   loginLinkBold: {
     fontWeight: '600',
-    color: '#FF6B35',
+    color: '#347A22',
   },
   button: {
     backgroundColor: theme.colors.accent,

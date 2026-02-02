@@ -274,13 +274,13 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   pricingCardSelected: {
-    borderColor: '#FFD700',
+    borderColor: '#CEEC2C',
   },
   bestValueBanner: {
     position: 'absolute',
     top: -8,
     right: -8,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     color: '#666666',
   },
   saveBadge: {
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     borderRadius: 8,
     paddingVertical: 6,
     paddingHorizontal: 12,

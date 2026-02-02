@@ -133,7 +133,7 @@ const DislikesAllergiesScreen: React.FC<DislikesAllergiesScreenProps> = ({ navig
                     <Ionicons 
                       name={option.icon as any} 
                       size={20} 
-                      color={isSelected ? '#FFFFFF' : '#1A1A1A'} 
+                      color={isSelected ? '#1A5B3D' : '#1A1A1A'} 
                     />
                   )}
                   <Text
@@ -248,8 +248,8 @@ const styles = StyleSheet.create({
     minHeight: 60,
   },
   optionButtonSelected: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
+    backgroundColor: '#E0EB60',
+    borderColor: '#E0EB60',
   },
   optionText: {
     fontSize: 16,
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   optionTextSelected: {
-    color: '#FFFFFF',
+    color: '#1A1A1A',
   },
   searchContainer: {
     flexDirection: 'row',

@@ -1393,7 +1393,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   filterChipActive: {
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
   },
   filterChipText: {
     fontSize: 14,
@@ -1621,7 +1621,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F0',
   },
   filterOptionSelected: {
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
   },
   filterOptionText: {
     fontSize: 14,
@@ -1817,7 +1817,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     alignItems: 'center',
     justifyContent: 'center',
   },

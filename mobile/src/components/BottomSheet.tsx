@@ -77,7 +77,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
           <View style={styles.handleContainer}>
             <View style={[
               styles.handleIndicator,
-              backgroundColor === '#FFD700' && { backgroundColor: 'rgba(0, 0, 0, 0.2)' }
+              (backgroundColor === '#FFD700' || backgroundColor === '#CEEC2C') && { backgroundColor: 'rgba(0, 0, 0, 0.2)' }
             ]} />
           </View>
 

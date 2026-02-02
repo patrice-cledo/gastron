@@ -675,8 +675,8 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
       <View style={styles.header}>
         <View style={styles.topBar}>
           <View style={styles.greetingContainer}>
-            <View style={styles.greetingHighlightContainer}>
-              <Text style={styles.greetingTextHighlighted}>{getGreeting()}, Support</Text>
+            <View >
+              <Text style={[styles.greetingTextHighlighted, { color: theme.colors.primaryDark, fontWeight: '800', textTransform: 'uppercase', fontSize: 17 }]}>{getGreeting()}!</Text>
             </View>
           </View>
           <View style={styles.headerButtons}>
@@ -1548,18 +1548,19 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
       <TouchableOpacity
         style={[
           styles.sousChefButton,
+          { backgroundColor: theme.colors.gastronButton },
           isScrolled ? styles.sousChefButtonFloating : styles.sousChefButtonWide,
         ]}
         onPress={() => setShowSousChefMenu(true)}
         activeOpacity={0.8}
       >
         {isScrolled ? (
-          <MaterialCommunityIcons name="chef-hat" size={24} color="#1A1A1A" />
+          <MaterialCommunityIcons name="chef-hat" size={24} color={theme.colors.black} />
         ) : (
           <>
-            <Text style={styles.sousChefButtonTextWide}>Need help? Ask your Gastron!</Text>
-            <View style={styles.sousChefLogoContainer}>
-              <MaterialCommunityIcons name="chef-hat" size={20} color="#FFD700" />
+            <Text style={[styles.sousChefButtonTextWide, { color: theme.colors.black }]}>Need help? Ask your Gastron!</Text>
+            <View style={[styles.sousChefLogoContainer, { backgroundColor: theme.colors.primaryDark }]}>
+              <MaterialCommunityIcons name="chef-hat" size={20} color={theme.colors.accent} />
             </View>
           </>
         )}
@@ -1570,27 +1571,27 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
         visible={showSousChefMenu}
         onClose={() => setShowSousChefMenu(false)}
         height="40%"
-        backgroundColor="#FFF9C4"
+        backgroundColor={theme.colors.parchment}
       >
         <View style={styles.sousChefMenuContent}>
           {/* Header - Logo covering the notch */}
           <View style={styles.sousChefMenuHeader}>
-            <View style={styles.sousChefMenuLogoContainer}>
-              <MaterialCommunityIcons name="chef-hat" size={24} color="#FFD700" />
+            <View style={[styles.sousChefMenuLogoContainer, { backgroundColor: theme.colors.primaryDark }]}>
+              <MaterialCommunityIcons name="chef-hat" size={24} color={theme.colors.accent} />
             </View>
             <TouchableOpacity
               style={styles.sousChefMenuCloseButton}
               onPress={() => setShowSousChefMenu(false)}
             >
-              <Ionicons name="close" size={20} color="#1A1A1A" />
+              <Ionicons name="close" size={20} color={theme.colors.black} />
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.sousChefMenuTitle}>What do you need help with?</Text>
+          <Text style={[styles.sousChefMenuTitle, { color: theme.colors.primaryDark }]}>What do you need help with?</Text>
 
           {/* Menu Options */}
           <TouchableOpacity
-            style={styles.sousChefMenuItem}
+            style={[styles.sousChefMenuItem, { backgroundColor: theme.colors.buttonSecondary }]}
             onPress={() => {
               setShowSousChefMenu(false);
               setShowInspirationBottomSheet(true);
@@ -1601,7 +1602,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.sousChefMenuItem}
+            style={[styles.sousChefMenuItem, { backgroundColor: theme.colors.buttonSecondary }]}
             onPress={() => {
               setShowSousChefMenu(false);
               setShowUseUpIngredientsBottomSheet(true);
@@ -1611,7 +1612,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.sousChefMenuItem}
+            style={[styles.sousChefMenuItem, { backgroundColor: theme.colors.buttonSecondary }]}
             onPress={() => {
               setShowSousChefMenu(false);
               setMealPlanGenerated(false);
@@ -1638,7 +1639,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
           setFilteredInspirationRecipes([]);
         }}
         height="70%"
-        backgroundColor="#FFF9C4"
+        backgroundColor={theme.colors.parchment}
       >
         <View style={styles.inspirationContent}>
           {/* Header */}
@@ -1680,7 +1681,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
           ) : isLoadingInspiration ? (
             /* Loading State */
             <View style={styles.inspirationLoadingContainer}>
-              <ActivityIndicator size="large" color="#FFD700" />
+              <ActivityIndicator size="large" color={theme.colors.accent} />
               <Text style={styles.inspirationLoadingText}>Finding perfect matches...</Text>
             </View>
           ) : (
@@ -1755,7 +1756,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
           setUseUpIngredientsRecipes([]);
         }}
         height="70%"
-        backgroundColor="#FFF9C4"
+        backgroundColor={theme.colors.parchment}
       >
         <View style={styles.useUpIngredientsContent}>
           {/* Header */}
@@ -1995,7 +1996,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
           setMealPlanServings({});
         }}
         height="85%"
-        backgroundColor="#FFF9C4"
+        backgroundColor={theme.colors.parchment}
       >
         <View style={styles.mealPlanContent}>
           {/* Header */}
@@ -2514,7 +2515,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sousChefButton: {
-    backgroundColor: '#FFD700',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -2546,26 +2546,23 @@ const styles = StyleSheet.create({
   sousChefButtonTextWide: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1A1A1A',
     flex: 1,
   },
   sousChefButtonTextFloating: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1A1A1A',
   },
   sousChefLogoContainer: {
     width: 40,
     height: 40,
     borderRadius: 5,
-    backgroundColor: '#1A1A1A',
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
   },
   sousChefMessageBubble: {
     flex: 1,
-    backgroundColor: '#FFF9C4',
+    backgroundColor: '#F5F5F0', // theme parchment
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -2587,12 +2584,11 @@ const styles = StyleSheet.create({
     borderLeftWidth: 8,
     borderTopColor: 'transparent',
     borderBottomColor: 'transparent',
-    borderLeftColor: '#FFF9C4',
+    borderLeftColor: '#F5F5F0', // theme parchment
   },
   sousChefLogo: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#FFD700',
   },
   sousChefMenuContent: {
     flex: 1,
@@ -2611,14 +2607,12 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#1A1A1A',
     justifyContent: 'center',
     alignItems: 'center',
   },
   sousChefMenuLogo: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#FFD700',
   },
   sousChefMenuCloseButton: {
     width: 30,
@@ -2632,12 +2626,10 @@ const styles = StyleSheet.create({
   sousChefMenuTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1A1A1A',
     marginBottom: 24,
     textAlign: 'center',
   },
   sousChefMenuItem: {
-    backgroundColor: '#1A1A1A',
     borderRadius: 9999, // Fully rounded (pill-shaped)
     paddingVertical: 18,
     paddingHorizontal: 20,
@@ -2754,7 +2746,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -2916,7 +2908,7 @@ const styles = StyleSheet.create({
     width: '47%',
     marginBottom: 16,
     borderWidth: 2,
-    borderColor: '#FFF9C4',
+    borderColor: '#F5F5F0',
     borderRadius: 12,
     padding: 4,
     backgroundColor: '#FFFFFF',
@@ -2965,7 +2957,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -3091,8 +3083,8 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   mealPlanTagSelected: {
-    backgroundColor: '#6B6B6B',
-    borderColor: '#6B6B6B',
+    backgroundColor: '#E0EB60',
+    borderColor: '#E0EB60',
   },
   mealPlanTagIcon: {
     fontSize: 18,
@@ -3104,7 +3096,7 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
   },
   mealPlanTagLabelSelected: {
-    color: '#FFFFFF',
+    color: '#1A1A1A',
   },
   mealPlanSearchContainer: {
     flexDirection: 'row',
@@ -3172,7 +3164,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -3727,7 +3719,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -4080,8 +4072,8 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0E0',
   },
   dayButtonSelected: {
-    backgroundColor: '#FFD700',
-    borderColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
+    borderColor: '#CEEC2C',
   },
   dayButtonText: {
     fontSize: 14,
@@ -4093,7 +4085,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   addToMenuSubmitButton: {
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: 'center',
@@ -4313,7 +4305,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',

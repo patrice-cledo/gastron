@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   progressBarFilled: {
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
   },
   progressBarEmpty: {
     backgroundColor: '#E0E0E0',
@@ -250,15 +250,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 20,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderWidth: 0.5,
+    borderColor: '#F0F0F0',
     marginBottom: 12,
     width: BUTTON_WIDTH,
     justifyContent: 'center',
   },
   cuisineButtonSelected: {
-    backgroundColor: '#FFD700',
-    borderColor: '#FFD700',
+    backgroundColor: '#E0EB60',
+    borderColor: '#E0EB60',
   },
   flagIcon: {
     fontSize: 18,
@@ -272,6 +272,7 @@ const styles = StyleSheet.create({
   },
   cuisineTextSelected: {
     fontWeight: '600',
+    color: '#1A1A1A',
   },
   surpriseMeContainer: {
     alignItems: 'center',
@@ -284,13 +285,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 20,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderWidth: 0.5,
+    borderColor: '#F0F0F0',
     justifyContent: 'center',
   },
   surpriseMeButtonSelected: {
-    backgroundColor: '#FFD700',
-    borderColor: '#FFD700',
+    backgroundColor: '#E0EB60',
+    borderColor: '#E0EB60',
   },
   surpriseMeText: {
     fontSize: 14,
@@ -311,8 +312,8 @@ const styles = StyleSheet.create({
     borderTopColor: '#F0F0F0',
   },
   nextButton: {
-    backgroundColor: '#FFD700',
-    borderRadius: 12,
+    backgroundColor: '#CEEC2C',
+    borderRadius: 999,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',

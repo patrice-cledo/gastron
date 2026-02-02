@@ -29,17 +29,27 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
     navigation.navigate('Pricing');
   };
 
+  const handleBack = () => {
+    navigation.goBack();
+  };
+
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header with back button */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBack} activeOpacity={0.7}>
+          <Ionicons name="chevron-back" size={28} color={theme.colors.black} />
+        </TouchableOpacity>
+      </View>
       <View style={styles.content}>
         {/* Continue with Email Button */}
         <TouchableOpacity
-          style={styles.emailButton}
+          style={[styles.emailButton, { backgroundColor: theme.colors.gastronButton }]}
           onPress={handleEmailSignUp}
           activeOpacity={0.8}
         >
-          <Ionicons name="mail" size={20} color="#FFFFFF" />
-          <Text style={styles.emailButtonText}>Continue with Email</Text>
+          <Ionicons name="mail" size={20} color={theme.colors.black} />
+          <Text style={[styles.emailButtonText, { color: theme.colors.black }]}>Continue with Email</Text>
         </TouchableOpacity>
 
         {/* OR Separator */}
@@ -78,17 +88,27 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    paddingTop: 8,
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: 8,
+  },
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: 24,
     justifyContent: 'center',
   },
   emailButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FF6B35',
     borderRadius: 12,
     paddingVertical: 16,
     marginBottom: 24,
@@ -97,7 +117,6 @@ const styles = StyleSheet.create({
   emailButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
   separator: {
     flexDirection: 'row',

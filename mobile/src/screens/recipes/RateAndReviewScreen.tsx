@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     width: '100%',
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',

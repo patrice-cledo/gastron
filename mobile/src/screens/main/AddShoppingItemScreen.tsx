@@ -71,7 +71,7 @@ const AddShoppingItemScreen: React.FC = () => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) }]}>
+      <View style={[styles.header, { paddingTop: 12 }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={handleBack}

@@ -35,7 +35,7 @@ const CustomTabBar = ({ state, descriptors, navigation }: any) => {
         style={[
           styles.indicatorBar, 
           { 
-            backgroundColor: theme.colors.accent,
+            backgroundColor: theme.colors.primaryDark,
             left: `${indicatorLeft}%`,
             width: `${indicatorWidth}%`,
             top: 0,
@@ -113,11 +113,11 @@ const CustomTabBar = ({ state, descriptors, navigation }: any) => {
             style={[styles.tabButton, isCreateButton && styles.createButton]}
           >
             {isCreateButton ? (
-              <View style={[styles.createButtonContainer, { backgroundColor: '#FFD4C2' }]}>
+              <View style={[styles.createButtonContainer, { backgroundColor: theme.colors.gastronButton }]}>
                 <Ionicons
                   name={iconName as any}
                   size={24}
-                  color={theme.colors.accent}
+                  color={theme.colors.black}
                 />
               </View>
             ) : (
@@ -125,9 +125,9 @@ const CustomTabBar = ({ state, descriptors, navigation }: any) => {
                 <Ionicons
                   name={iconName as any}
                   size={22}
-                  color={isFocused ? theme.colors.accent : theme.colors.mediumGray}
+                  color={isFocused ? theme.colors.primaryDark : theme.colors.mediumGray}
                 />
-                <Text style={[styles.tabLabel, isFocused && styles.tabLabelFocused]}>
+                <Text style={[styles.tabLabel, { color: isFocused ? theme.colors.primaryDark : theme.colors.mediumGray }, isFocused && styles.tabLabelFocused]}>
                   {label}
                 </Text>
               </View>
@@ -216,11 +216,9 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontSize: 11,
     fontWeight: '500',
-    color: '#999999',
     marginTop: 2,
   },
   tabLabelFocused: {
-    color: '#FF6B35',
     fontWeight: '600',
   },
   createButton: {

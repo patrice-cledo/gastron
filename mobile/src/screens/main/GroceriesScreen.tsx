@@ -1041,11 +1041,11 @@ const GroceriesScreen: React.FC = () => {
         {scopedItems.length === 0 && (
           <View style={styles.emptyState}>
             <TouchableOpacity
-              style={styles.emptyStateButton}
+              style={[styles.emptyStateButton, { backgroundColor: theme.colors.gastronButton }]}
               onPress={handleOpenAddModal}
             >
-              <Ionicons name="add" size={20} color="#FFFFFF" />
-              <Text style={styles.emptyStateButtonText}>Add your first ingredient</Text>
+              <Ionicons name="add" size={20} color={theme.colors.black} />
+              <Text style={[styles.emptyStateButtonText, { color: theme.colors.black }]}>Add your first ingredient</Text>
             </TouchableOpacity>
             <View style={styles.emptyStateIconContainer}>
               <Ionicons name="bag-outline" size={64} color="#E0E0E0" />
@@ -1864,7 +1864,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -1971,7 +1971,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   emptyStateButton: {
-    backgroundColor: '#FF6B35',
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 20,
@@ -1986,7 +1985,6 @@ const styles = StyleSheet.create({
   emptyStateButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
   },
   emptyStateIconContainer: {
     marginBottom: 16,

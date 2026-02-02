@@ -273,8 +273,8 @@ const styles = StyleSheet.create({
     minHeight: 60,
   },
   optionButtonSelected: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
+    backgroundColor: '#E0EB60',
+    borderColor: '#E0EB60',
   },
   optionText: {
     fontSize: 16,
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
   },
   optionTextSelected: {
-    color: '#FFFFFF',
+    color: '#1A1A1A',
   },
   otherButton: {
     flexDirection: 'row',
@@ -299,8 +299,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   otherButtonSelected: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
+    backgroundColor: '#E0EB60',
+    borderColor: '#E0EB60',
   },
   otherText: {
     fontSize: 16,
@@ -318,15 +318,15 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 16,
     borderRadius: 12,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#E0EB60',
     borderWidth: 1,
-    borderColor: '#FFD700',
+    borderColor: '#E0EB60',
     width: '100%',
     minHeight: 60,
   },
   noPreferenceButtonSelected: {
-    backgroundColor: '#FFD700',
-    borderColor: '#FFD700',
+    backgroundColor: '#E0EB60',
+    borderColor: '#E0EB60',
   },
   noPreferenceText: {
     fontSize: 16,

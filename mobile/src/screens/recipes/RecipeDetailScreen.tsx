@@ -1314,6 +1314,7 @@ const RecipeDetailScreen: React.FC = () => {
                 styles.tabText,
                 activeTab === 'ingredients' && styles.tabTextActive,
               ]}
+              numberOfLines={1}
             >
               Ingredients
             </Text>
@@ -1324,6 +1325,7 @@ const RecipeDetailScreen: React.FC = () => {
           >
             <Text
               style={[styles.tabText, activeTab === 'equipment' && styles.tabTextActive]}
+              numberOfLines={1}
             >
               Equipment
             </Text>
@@ -1334,6 +1336,7 @@ const RecipeDetailScreen: React.FC = () => {
           >
             <Text
               style={[styles.tabText, activeTab === 'info' && styles.tabTextActive]}
+              numberOfLines={1}
             >
               Info
             </Text>
@@ -2558,8 +2561,8 @@ const RecipeDetailScreen: React.FC = () => {
                 style={styles.createCollectionButton}
                 onPress={() => setShowCreateCollection(true)}
               >
-                <Ionicons name="add-circle-outline" size={20} color="#FF6B35" />
-                <Text style={styles.createCollectionButtonText}>Create new collection</Text>
+                <Ionicons name="add-circle-outline" size={20} color="#1A5B3D" />
+                <Text style={styles.createCollectionButtonText}>Create new cookbook</Text>
               </TouchableOpacity>
             </>
           ) : (
@@ -2758,7 +2761,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2825,7 +2828,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -3023,7 +3026,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -3181,16 +3184,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     borderRadius: 16,
     backgroundColor: 'transparent',
     gap: 8,
+    minWidth: 0,
   },
   tabActive: {
     backgroundColor: '#FFFFFF',
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#666666',
   },
@@ -3259,7 +3263,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -3499,7 +3503,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
@@ -3526,7 +3530,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
   },
   addToMenuTitleContainer: {
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
@@ -3627,7 +3631,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dayButtonSelected: {
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
   },
   dayButtonText: {
     fontSize: 12,
@@ -3639,7 +3643,7 @@ const styles = StyleSheet.create({
     color: '#1A1A1A',
   },
   addToMenuSubmitButton: {
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -3666,7 +3670,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1000,
@@ -3728,7 +3732,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -3750,7 +3754,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   saveNotesButton: {
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: 'center',
@@ -3837,7 +3841,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -4118,7 +4122,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -4154,7 +4158,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -4211,7 +4215,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -4398,7 +4402,7 @@ const styles = StyleSheet.create({
   },
   createCollectionButtonText: {
     fontSize: 16,
-    color: '#FF6B35',
+    color: '#1A5B3D',
     fontWeight: '500',
   },
   createCollectionHeader: {
@@ -4431,7 +4435,7 @@ const styles = StyleSheet.create({
     borderColor: '#E0E0DA',
   },
   createCollectionSaveButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: '#C6ED6E',
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
@@ -4443,7 +4447,7 @@ const styles = StyleSheet.create({
   createCollectionSaveButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#1A1A1A',
   },
   createCollectionSaveButtonTextDisabled: {
     color: '#999999',

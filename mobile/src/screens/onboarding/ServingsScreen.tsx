@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   progressBarFilled: {
-    backgroundColor: '#FFD700',
+    backgroundColor: '#CEEC2C',
   },
   progressBarEmpty: {
     backgroundColor: '#E0E0E0',
@@ -234,8 +234,8 @@ const styles = StyleSheet.create({
     borderTopColor: '#F0F0F0',
   },
   nextButton: {
-    backgroundColor: '#FFD700',
-    borderRadius: 12,
+    backgroundColor: '#CEEC2C',
+    borderRadius: 999,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',

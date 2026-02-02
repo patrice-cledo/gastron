@@ -43,7 +43,7 @@ export const Button: React.FC<ButtonProps> = ({
     // Variant styles
     const variantStyles = {
       primary: {
-        backgroundColor: theme.colors.black,
+        backgroundColor: theme.colors.accent,
       },
       secondary: {
         backgroundColor: theme.colors.beige,
@@ -71,7 +71,7 @@ export const Button: React.FC<ButtonProps> = ({
     };
 
     const variantTextStyles = {
-      primary: { color: theme.colors.white },
+      primary: { color: theme.colors.black },
       secondary: { color: theme.colors.black },
       outline: { color: theme.colors.black },
     };
@@ -92,7 +92,7 @@ export const Button: React.FC<ButtonProps> = ({
       {loading ? (
         <ActivityIndicator
           size="small"
-          color={variant === 'primary' ? theme.colors.white : theme.colors.black}
+          color={theme.colors.black}
         />
       ) : (
         <Text 
@@ -100,7 +100,7 @@ export const Button: React.FC<ButtonProps> = ({
             {
               fontSize: theme.typography.styles.button.fontSize,
               fontWeight: theme.typography.styles.button.fontWeight,
-              color: textStyle?.color || (variant === 'primary' ? theme.colors.white : theme.colors.black),
+              color: textStyle?.color || theme.colors.black,
             },
             textStyle, // Custom textStyle should override defaults
           ]} 
