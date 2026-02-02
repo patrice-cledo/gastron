@@ -292,13 +292,11 @@ const styles = StyleSheet.create({
     borderTopColor: '#F0F0F0',
   },
   saveButton: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: '#E0EB60',
+    borderRadius: 20,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#1A1A1A',
   },
   saveButtonText: {
     fontSize: 18,

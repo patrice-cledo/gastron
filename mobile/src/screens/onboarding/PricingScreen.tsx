@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
   },
   startTrialButton: {
     backgroundColor: '#1A1A1A',
-    borderRadius: 12,
+    borderRadius: 20,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',

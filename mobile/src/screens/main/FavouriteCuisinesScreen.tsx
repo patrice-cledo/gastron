@@ -21,22 +21,22 @@ interface CuisineOption {
 }
 
 const CUISINE_OPTIONS: CuisineOption[] = [
-  { id: 'greek', label: 'Greek', icon: 'flag', iconType: 'ionicon' },
-  { id: 'american', label: 'American', icon: 'flag', iconType: 'ionicon' },
-  { id: 'british', label: 'British', icon: 'flag', iconType: 'ionicon' },
-  { id: 'european', label: 'European', icon: 'flag', iconType: 'ionicon' },
-  { id: 'french', label: 'French', icon: 'flag', iconType: 'ionicon' },
-  { id: 'indian', label: 'Indian', icon: 'flag', iconType: 'ionicon' },
-  { id: 'italian', label: 'Italian', icon: 'flag', iconType: 'ionicon' },
-  { id: 'japanese', label: 'Japanese', icon: 'flag', iconType: 'ionicon' },
-  { id: 'korean', label: 'Korean', icon: 'flag', iconType: 'ionicon' },
-  { id: 'lebanese', label: 'Lebanese', icon: 'flag', iconType: 'ionicon' },
-  { id: 'mediterranean', label: 'Mediterranean', icon: 'flag', iconType: 'ionicon' },
-  { id: 'mexican', label: 'Mexican', icon: 'flag', iconType: 'ionicon' },
-  { id: 'spanish', label: 'Spanish', icon: 'flag', iconType: 'ionicon' },
-  { id: 'thai', label: 'Thai', icon: 'flag', iconType: 'ionicon' },
-  { id: 'turkish', label: 'Turkish', icon: 'flag', iconType: 'ionicon' },
-  { id: 'vietnamese', label: 'Vietnamese', icon: 'flag', iconType: 'ionicon' },
+  { id: 'greek', label: 'Greek', icon: '🇬🇷', iconType: 'flag' },
+  { id: 'american', label: 'American', icon: '🇺🇸', iconType: 'flag' },
+  { id: 'british', label: 'British', icon: '🇬🇧', iconType: 'flag' },
+  { id: 'european', label: 'European', icon: '🇪🇺', iconType: 'flag' },
+  { id: 'french', label: 'French', icon: '🇫🇷', iconType: 'flag' },
+  { id: 'indian', label: 'Indian', icon: '🇮🇳', iconType: 'flag' },
+  { id: 'italian', label: 'Italian', icon: '🇮🇹', iconType: 'flag' },
+  { id: 'japanese', label: 'Japanese', icon: '🇯🇵', iconType: 'flag' },
+  { id: 'korean', label: 'Korean', icon: '🇰🇷', iconType: 'flag' },
+  { id: 'lebanese', label: 'Lebanese', icon: '🇱🇧', iconType: 'flag' },
+  { id: 'mediterranean', label: 'Mediterranean', icon: '🇬🇷', iconType: 'flag' },
+  { id: 'mexican', label: 'Mexican', icon: '🇲🇽', iconType: 'flag' },
+  { id: 'spanish', label: 'Spanish', icon: '🇪🇸', iconType: 'flag' },
+  { id: 'thai', label: 'Thai', icon: '🇹🇭', iconType: 'flag' },
+  { id: 'turkish', label: 'Turkish', icon: '🇹🇷', iconType: 'flag' },
+  { id: 'vietnamese', label: 'Vietnamese', icon: '🇻🇳', iconType: 'flag' },
   { id: 'fusion', label: 'Fusion', icon: 'globe', iconType: 'ionicon' },
   { id: 'surprise-me', label: 'Surprise Me', icon: 'bulb', iconType: 'ionicon' },
 ];
@@ -131,6 +131,9 @@ const FavouriteCuisinesScreen: React.FC<FavouriteCuisinesScreenProps> = ({ navig
                   onPress={() => handleOptionToggle(option.id)}
                   activeOpacity={0.7}
                 >
+                  {option.icon && option.iconType === 'flag' && (
+                    <Text style={styles.flagIcon}>{option.icon}</Text>
+                  )}
                   {option.icon && option.iconType === 'ionicon' && (
                     <Ionicons 
                       name={option.icon as any} 
@@ -238,6 +241,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0EB60',
     borderColor: '#E0EB60',
   },
+  flagIcon: {
+    fontSize: 18,
+  },
   optionText: {
     fontSize: 14,
     fontWeight: '500',
@@ -260,13 +266,11 @@ const styles = StyleSheet.create({
     borderTopColor: '#F0F0F0',
   },
   saveButton: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    backgroundColor: '#E0EB60',
+    borderRadius: 20,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#1A1A1A',
   },
   saveButtonText: {
     fontSize: 18,

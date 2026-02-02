@@ -389,7 +389,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   button: {
     backgroundColor: theme.colors.accent,
-    borderRadius: 12,
+    borderRadius: 20,
     paddingVertical: 16,
     width: '100%',
     alignItems: 'center',

@@ -141,7 +141,7 @@ function makeStyles(theme: Theme) {
     },
     createButton: {
       backgroundColor: c.accent,
-      borderRadius: 12,
+      borderRadius: 20,
       paddingVertical: 16,
       alignItems: 'center',
       justifyContent: 'center',

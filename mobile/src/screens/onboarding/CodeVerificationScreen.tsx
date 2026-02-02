@@ -6,6 +6,7 @@ import { useRoute, CommonActions, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeProvider';
+import { colors } from '../../theme/colors';
 import { functions } from '../../services/firebase';
 import { auth } from '../../services/firebase';
 import { httpsCallable } from 'firebase/functions';
@@ -259,7 +260,7 @@ const CodeVerificationScreen: React.FC<CodeVerificationScreenProps> = ({ navigat
           {/* Security Icon */}
           <View style={styles.iconContainer}>
             <View style={styles.iconBackground}>
-              <Ionicons name="shield-checkmark" size={40} color="#FF6B35" />
+              <Ionicons name="shield-checkmark" size={40} color={colors.primaryDark} />
             </View>
           </View>
 
@@ -393,7 +394,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 16,
-    backgroundColor: '#FFE5E5',
+    backgroundColor: '#E8F0E8',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -435,11 +436,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   codeInputFilled: {
-    borderColor: '#FF6B35',
+    borderColor: colors.primaryDark,
   },
   verifyButton: {
-    backgroundColor: '#FF6B35',
-    borderRadius: 12,
+    backgroundColor: colors.primaryDark,
+    borderRadius: 20,
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',

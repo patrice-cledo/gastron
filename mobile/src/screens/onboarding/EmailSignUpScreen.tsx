@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#4CAF50',
-    borderRadius: 12,
+    borderRadius: 20,
     paddingVertical: 16,
     marginTop: 8,
     marginBottom: 24,

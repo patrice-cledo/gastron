@@ -343,17 +343,20 @@ const ProfileScreen: React.FC = () => {
     }
   };
 
-  // Mock data for cooking breakdown chart
+  // Mock data for cooking breakdown chart (values 1–6: how many times per week user eats that diet)
   const cookingBreakdown = {
-    MEAT: 1,
-    FISH: 0,
-    VEGGIE: 0,
-    VEGAN: 0,
-    'M&F': 0,
+    MEAT: 6,
+    FISH: 1,
+    VEGGIE: 2,
+    VEGAN: 1,
+    'M&F': 2,
   };
 
-  const maxValue = Math.max(...Object.values(cookingBreakdown), 1);
+  const CHART_MAX = 6; // Y-axis scale 1–6
   const chartHeight = 200;
+  const gapBelowBaseline = 12; // gap between "1" line and category labels
+  const labelRowHeight = 36;
+  const barAreaHeight = chartHeight - gapBelowBaseline - labelRowHeight;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
@@ -543,14 +546,6 @@ const ProfileScreen: React.FC = () => {
               <Ionicons name="chevron-forward" size={20} color="#999999" />
             </View>
           </TouchableOpacity>
-
-          <TouchableOpacity style={styles.listItem}>
-            <Text style={styles.listItemText}>Password</Text>
-            <View style={styles.listItemRight}>
-              <Text style={styles.listItemValue}>********</Text>
-              <Ionicons name="chevron-forward" size={20} color="#999999" />
-            </View>
-          </TouchableOpacity>
         </View>
 
         {/* Account Options Section */}
@@ -575,8 +570,8 @@ const ProfileScreen: React.FC = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Cooking Breakdown</Text>
           <View style={styles.chartContainer}>
-            {/* Y-axis labels */}
-            <View style={styles.yAxis}>
+            {/* Y-axis labels (height matches bar area so "1" is at bar baseline) */}
+            <View style={[styles.yAxis, { height: barAreaHeight }]}>
               {[6, 5, 4, 3, 2, 1].map((num) => (
                 <Text key={num} style={styles.yAxisLabel}>{num}</Text>
               ))}
@@ -584,26 +579,33 @@ const ProfileScreen: React.FC = () => {
             
             {/* Chart area */}
             <View style={styles.chartArea}>
-              {/* Grid lines */}
-              <View style={styles.gridLines}>
+              {/* Grid lines (only in bar area so bottom line is the "1" line) */}
+              <View style={[styles.gridLines, { height: barAreaHeight, bottom: undefined }]}>
                 {[1, 2, 3, 4, 5, 6].map((num) => (
                   <View key={num} style={styles.gridLine} />
                 ))}
               </View>
               
-              {/* Bars container */}
-              <View style={styles.barsContainer}>
+              {/* Bars row (fixed height, labels below) */}
+              <View style={[styles.barsContainer, { height: barAreaHeight }]}>
                 {Object.entries(cookingBreakdown).map(([category, value]) => (
                   <View key={category} style={styles.barColumn}>
                     <View
                       style={[
                         styles.bar,
                         {
-                          height: value > 0 ? (value / maxValue) * (chartHeight - 40) : 0,
+                          height: value > 0 ? (value / CHART_MAX) * barAreaHeight : 0,
                           backgroundColor: category === 'MEAT' ? '#FF6B6B' : '#CEEC2C',
                         },
                       ]}
                     />
+                  </View>
+                ))}
+              </View>
+              {/* X-axis labels row (all on one line, centered under each bar) */}
+              <View style={styles.xAxisLabelsRow}>
+                {Object.keys(cookingBreakdown).map((category) => (
+                  <View key={category} style={styles.xAxisLabelCell}>
                     <Text style={styles.xAxisLabel}>{category}</Text>
                   </View>
                 ))}
@@ -821,7 +823,6 @@ const styles = StyleSheet.create({
     width: 24,
     justifyContent: 'space-between',
     paddingRight: 8,
-    height: 200,
   },
   yAxisLabel: {
     fontSize: 12,
@@ -833,13 +834,13 @@ const styles = StyleSheet.create({
     flex: 1,
     position: 'relative',
     height: 200,
+    flexDirection: 'column',
   },
   gridLines: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    bottom: 0,
     justifyContent: 'space-between',
   },
   gridLine: {
@@ -851,27 +852,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    height: '100%',
-    paddingBottom: 24,
   },
   barColumn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'flex-end',
-    height: '100%',
   },
   bar: {
     width: '80%',
     borderRadius: 4,
-    marginBottom: 8,
-    minHeight: 2,
+  },
+  xAxisLabelsRow: {
+    flexDirection: 'row',
+    height: 36,
+    marginTop: 12,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  xAxisLabelCell: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   xAxisLabel: {
     fontSize: 10,
     fontWeight: '500',
     color: '#666666',
     textAlign: 'center',
-    marginTop: 4,
   },
   logoutButton: {
     flexDirection: 'row',

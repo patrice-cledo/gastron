@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   },
   letsGoButton: {
     backgroundColor: '#1A1A1A',
-    borderRadius: 12,
+    borderRadius: 20,
     paddingVertical: 18,
     paddingHorizontal: 60,
     width: '100%',
