@@ -27,28 +27,28 @@ const NotificationsScreen: React.FC = () => {
   const messages: Message[] = [
     {
       id: '4',
-      sender: 'Sous-Chef',
+      sender: 'Gastron',
       timestamp: '10:30AM',
       date: 'Today',
       content: "New recipe recommendations are ready! Check out our latest collection of delicious dishes tailored just for you.",
     },
     {
       id: '1',
-      sender: 'Sous-Chef',
+      sender: 'Gastron',
       timestamp: '2:00AM',
       date: 'Saturday 17th of January',
       content: "You've got some amazing recipes lined up—now let's get started! Dive into your first recipe and enjoy the culinary adventure.",
     },
     {
       id: '2',
-      sender: 'Sous-Chef',
+      sender: 'Gastron',
       timestamp: '3:00AM',
       date: 'Friday 16th of January',
       content: "Let us know your dietary needs, and we'll make sure your recipe recommendations fit you perfectly. Whether you're plant-based, gluten-free, or have any other preferences, we've got you covered. Take a moment to customise your experience now!",
     },
     {
       id: '3',
-      sender: 'Sous-Chef',
+      sender: 'Gastron',
       timestamp: '2:00AM',
       date: 'Tuesday 13th of January',
       content: "Great news! We've saved your dietary preferences and customized your recipe recommendations just for you. Whether you're looking for something quick, hearty, or light, we've got plenty of options that match your taste. Ready to discover your perfect dish? Let's get cooking!",
@@ -112,7 +112,7 @@ const NotificationsScreen: React.FC = () => {
               <View key={message.id} style={styles.messageContainer}>
                 <View style={styles.messageHeader}>
                   <View style={styles.senderIcon}>
-                    <Text style={styles.senderIconText}>SC</Text>
+                    <Text style={styles.senderIconText}>G</Text>
                   </View>
                   <View style={styles.messageHeaderText}>
                     <Text style={styles.senderName}>{message.sender}</Text>
