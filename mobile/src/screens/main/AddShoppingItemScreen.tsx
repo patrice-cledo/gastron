@@ -56,16 +56,23 @@ const AddShoppingItemScreen: React.FC = () => {
     inputRef.current?.focus();
   };
 
-  const handleReturnToShoppingList = () => {
-    // Add all selected items to the grocery store
-    selectedItems.forEach(item => {
+  const saveAndGoBack = () => {
+    const trimmedInput = inputValue.trim();
+    const itemsToSave = trimmedInput && !selectedItems.includes(trimmedInput)
+      ? [...selectedItems, trimmedInput]
+      : selectedItems;
+    itemsToSave.forEach(item => {
       addManualItem(item);
     });
     navigation.goBack();
   };
 
+  const handleReturnToShoppingList = () => {
+    saveAndGoBack();
+  };
+
   const handleBack = () => {
-    navigation.goBack();
+    saveAndGoBack();
   };
 
   return (
@@ -130,9 +137,9 @@ const AddShoppingItemScreen: React.FC = () => {
       {/* Return Button */}
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
         <TouchableOpacity
-          style={styles.returnButton}
+          style={[styles.returnButton, selectedItems.length === 0 && !inputValue.trim() && styles.returnButtonDisabled]}
           onPress={handleReturnToShoppingList}
-          disabled={selectedItems.length === 0}
+          disabled={selectedItems.length === 0 && !inputValue.trim()}
         >
           <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
           <Text style={styles.returnButtonText}>RETURN TO SHOPPING LIST</Text>
@@ -223,7 +230,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#1A1A1A',
-    borderRadius: 12,
+    borderRadius: 20,
     paddingVertical: 16,
     gap: 8,
     opacity: 1,
