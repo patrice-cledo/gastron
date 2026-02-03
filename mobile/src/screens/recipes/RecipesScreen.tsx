@@ -9,6 +9,7 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList, TabParamList } from '../../types/navigation';
 import { useRecipesStore } from '../../stores/recipesStore';
+import { useCollectionsStore } from '../../stores/collectionsStore';
 import { useMealPlanStore, MealPlanItem } from '../../stores/mealPlanStore';
 import { useGroceriesStore } from '../../stores/groceriesStore';
 import { GrocerySource } from '../../types/grocery';
@@ -20,7 +21,8 @@ import { Toast } from '../../components/Toast';
 import { Recipe } from '../../types/recipe';
 import { useModal } from '../../context/ModalContext';
 import { ref, getDownloadURL } from 'firebase/storage';
-import { storage, db, auth } from '../../services/firebase';
+import { storage, db, auth, functions } from '../../services/firebase';
+import { httpsCallable } from 'firebase/functions';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -35,7 +37,8 @@ interface RecipesScreenProps {
 
 const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
   const theme = useTheme();
-  const { recipes, addRecipe, setRecipes } = useRecipesStore();
+  const { recipes, addRecipe, setRecipes, updateRecipe } = useRecipesStore();
+  const { collections, addCollection } = useCollectionsStore();
   const { mealPlans, addMealPlan } = useMealPlanStore();
   const { items: groceryItems, recipes: groceryRecipes, addItems } = useGroceriesStore();
   const { showImportModal } = useModal();
@@ -85,6 +88,10 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('success');
+  const [showCollectionSelection, setShowCollectionSelection] = useState(false);
+  const [showCreateCollection, setShowCreateCollection] = useState(false);
+  const [newCollectionName, setNewCollectionName] = useState('');
+  const [selectedRecipeForCollection, setSelectedRecipeForCollection] = useState<Recipe | null>(null);
   
   // Shared ingredient list
   const ALL_INGREDIENTS = [
@@ -1422,8 +1429,11 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
               <TouchableOpacity
                 style={styles.recipeOptionItem}
                 onPress={() => {
-                  // TODO: Add to My Recipes (bookmark/favorite)
-                  setShowRecipeOptionsBottomSheet(false);
+                  if (selectedRecipeForOptions) {
+                    setSelectedRecipeForCollection(selectedRecipeForOptions);
+                    setShowRecipeOptionsBottomSheet(false);
+                    setShowCollectionSelection(true);
+                  }
                 }}
               >
                 <Ionicons name="heart-outline" size={24} color="#1A1A1A" />
@@ -1540,6 +1550,147 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
             </View>
           </>
         )}
+          </View>
+        )}
+      </BottomSheet>
+
+      {/* Collection Selection Bottom Sheet (Add to My Recipes) */}
+      <BottomSheet
+        visible={showCollectionSelection}
+        onClose={() => {
+          setShowCollectionSelection(false);
+          setShowCreateCollection(false);
+          setNewCollectionName('');
+          setSelectedRecipeForCollection(null);
+        }}
+        height="60%"
+      >
+        {selectedRecipeForCollection && (
+          <View style={styles.collectionsContent}>
+            {!showCreateCollection ? (
+              <>
+                <View style={styles.collectionSelectionHeader}>
+                  <Text style={styles.collectionSelectionTitle}>Select Collections</Text>
+                  <Text style={styles.collectionSelectionSubtitle}>A recipe can be in multiple collections</Text>
+                </View>
+                {collections.map((coll, index) => {
+                  const currentCollections = (selectedRecipeForCollection as any).collections
+                    ? (selectedRecipeForCollection as any).collections
+                    : ((selectedRecipeForCollection as any).cookbook ? [(selectedRecipeForCollection as any).cookbook] : []);
+                  const isSelected = Array.isArray(currentCollections) && currentCollections.includes(coll);
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={[styles.collectionOption, isSelected && styles.collectionOptionSelected]}
+                      onPress={async () => {
+                        try {
+                          const updatedCollections = isSelected
+                            ? currentCollections.filter((col: string) => col !== coll)
+                            : [...currentCollections, coll];
+                          const updateRecipeFunction = httpsCallable(functions, 'updateRecipe');
+                          await updateRecipeFunction({
+                            recipeId: selectedRecipeForCollection.id,
+                            collections: updatedCollections.length > 0 ? updatedCollections : [],
+                          });
+                          updateRecipe(selectedRecipeForCollection.id, { collections: updatedCollections });
+                          setSelectedRecipeForCollection({ ...selectedRecipeForCollection, collections: updatedCollections } as Recipe);
+                          setToastMessage(isSelected ? `Removed from "${coll}"` : `Added to "${coll}"`);
+                          setToastType('success');
+                          setToastVisible(true);
+                        } catch (error) {
+                          console.error('Error updating recipe collection:', error);
+                          setToastMessage('Failed to update collection');
+                          setToastType('error');
+                          setToastVisible(true);
+                        }
+                      }}
+                    >
+                      <View style={styles.collectionCheckbox}>
+                        <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+                          {isSelected && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+                        </View>
+                      </View>
+                      <Text style={[styles.collectionOptionText, isSelected && styles.collectionOptionTextSelected]}>
+                        {coll}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+                <TouchableOpacity
+                  style={styles.createCollectionButton}
+                  onPress={() => setShowCreateCollection(true)}
+                >
+                  <Ionicons name="add-circle-outline" size={20} color="#1A5B3D" />
+                  <Text style={styles.createCollectionButtonText}>Create new cookbook</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <View style={styles.createCollectionHeader}>
+                  <TouchableOpacity
+                    style={styles.createCollectionBackButton}
+                    onPress={() => {
+                      setShowCreateCollection(false);
+                      setNewCollectionName('');
+                    }}
+                  >
+                    <Ionicons name="chevron-back" size={24} color="#1A1A1A" />
+                  </TouchableOpacity>
+                  <Text style={styles.createCollectionTitle}>New Collection</Text>
+                  <View style={{ width: 40 }} />
+                </View>
+                <TextInput
+                  style={styles.createCollectionInput}
+                  placeholder="Collection name"
+                  placeholderTextColor="#999"
+                  value={newCollectionName}
+                  onChangeText={setNewCollectionName}
+                  autoFocus
+                />
+                <TouchableOpacity
+                  style={[
+                    styles.createCollectionSaveButton,
+                    !newCollectionName.trim() && styles.createCollectionSaveButtonDisabled,
+                  ]}
+                  onPress={async () => {
+                    if (!newCollectionName.trim() || !selectedRecipeForCollection) return;
+                    try {
+                      await addCollection(newCollectionName.trim());
+                      const currentCollections = (selectedRecipeForCollection as any).collections
+                        ? (selectedRecipeForCollection as any).collections
+                        : ((selectedRecipeForCollection as any).cookbook ? [(selectedRecipeForCollection as any).cookbook] : []);
+                      const updatedCollections = [...currentCollections, newCollectionName.trim()];
+                      const updateRecipeFunction = httpsCallable(functions, 'updateRecipe');
+                      await updateRecipeFunction({
+                        recipeId: selectedRecipeForCollection.id,
+                        collections: updatedCollections,
+                      });
+                      updateRecipe(selectedRecipeForCollection.id, { collections: updatedCollections });
+                      setSelectedRecipeForCollection({ ...selectedRecipeForCollection, collections: updatedCollections } as Recipe);
+                      setNewCollectionName('');
+                      setShowCreateCollection(false);
+                      setShowCollectionSelection(false);
+                      setToastMessage(`Added to "${newCollectionName.trim()}"`);
+                      setToastType('success');
+                      setToastVisible(true);
+                    } catch (error) {
+                      console.error('Error creating collection and updating recipe:', error);
+                      setToastMessage('Failed to update collection');
+                      setToastType('error');
+                      setToastVisible(true);
+                    }
+                  }}
+                  disabled={!newCollectionName.trim()}
+                >
+                  <Text style={[
+                    styles.createCollectionSaveButtonText,
+                    !newCollectionName.trim() && styles.createCollectionSaveButtonTextDisabled,
+                  ]}>
+                    Save
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         )}
       </BottomSheet>
@@ -4207,6 +4358,126 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '400',
     color: '#1A1A1A',
+  },
+  // Collection Selection Bottom Sheet Styles
+  collectionsContent: {
+    paddingVertical: 8,
+  },
+  collectionSelectionHeader: {
+    paddingBottom: 16,
+    marginBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  collectionSelectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 4,
+  },
+  collectionSelectionSubtitle: {
+    fontSize: 14,
+    color: '#666666',
+    fontWeight: '400',
+  },
+  collectionOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    gap: 12,
+  },
+  collectionOptionSelected: {
+    backgroundColor: '#FFF5F0',
+  },
+  collectionCheckbox: {
+    marginRight: 4,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  checkboxSelected: {
+    backgroundColor: '#FF6B35',
+    borderColor: '#FF6B35',
+  },
+  collectionOptionText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#1A1A1A',
+    fontWeight: '500',
+  },
+  collectionOptionTextSelected: {
+    color: '#FF6B35',
+    fontWeight: '600',
+  },
+  createCollectionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 4,
+    marginTop: 8,
+  },
+  createCollectionButtonText: {
+    fontSize: 16,
+    color: '#1A5B3D',
+    fontWeight: '500',
+  },
+  createCollectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  createCollectionBackButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+  },
+  createCollectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A1A1A',
+  },
+  createCollectionInput: {
+    backgroundColor: '#F5F5F0',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#1A1A1A',
+    marginBottom: 16,
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: '#E0E0DA',
+  },
+  createCollectionSaveButton: {
+    backgroundColor: '#C6ED6E',
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  createCollectionSaveButtonDisabled: {
+    backgroundColor: '#E0E0DA',
+  },
+  createCollectionSaveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1A1A1A',
+  },
+  createCollectionSaveButtonTextDisabled: {
+    color: '#999999',
   },
   // Challenges Section Styles
   challengeCard: {
