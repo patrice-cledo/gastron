@@ -24,8 +24,8 @@ service cloud.firestore {
       // - Their own recipes (public or private)
       // - Public recipes (isPublic == true)
       allow read: if isAuthenticated() && (
-        resource.data.userId == request.auth.uid ||
-        (resource.data.isPublic == true && 'isPublic' in resource.data)
+        (resource.data.userId == request.auth.uid) ||
+        (resource.data.isPublic == true)
       );
       
       // Users can create recipes (must set userId and isPublic)
@@ -185,6 +185,11 @@ service cloud.firestore {
       allow delete: if isOwner(resource.data.userId);
     }
     
+    // Admin config (e.g. recipe import domains) – restrict to admin users in production if needed
+    match /config/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+    
     // User Cooked Recipes collection
     match /userCookedRecipes/{cookedId} {
       // Users can only read/write their own cooked recipes
@@ -239,6 +244,18 @@ service cloud.firestore {
         resource != null &&
         resource.data != null &&
         resource.data.userId == request.auth.uid;
+    }
+
+    // Icon Mappings collection
+    match /iconMappings/{mappingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // Challenges collection
+    match /challenges/{challengeId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
     }
   }
 }

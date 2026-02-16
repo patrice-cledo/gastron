@@ -1,9 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { SvgUri } from 'react-native-svg';
+import { useIconMappingsStore } from '../hooks/useIconMappings';
 import { SpriteSheetIcon } from './SpriteSheetIcon';
 import { getIngredientSpriteCode } from '../utils/ingredientMapping';
 
-export type IngredientType = 
+export type IngredientType =
   | 'whole' // shrimp, mushrooms, olives, etc.
   | 'sliced' // lemon slices, cucumber coins, etc.
   | 'scatter' // salt, herbs, grated cheese
@@ -20,6 +22,9 @@ interface IngredientIconProps {
   showLabel?: boolean;
 }
 
+
+// ... (existing imports and types)
+
 export const IngredientIcon: React.FC<IngredientIconProps> = ({
   name,
   type,
@@ -30,6 +35,9 @@ export const IngredientIcon: React.FC<IngredientIconProps> = ({
   unit,
   showLabel = false,
 }) => {
+  const { mappings } = useIconMappingsStore();
+  const dynamicIconName = mappings[name.toLowerCase().trim()];
+
   const getSizeValue = () => {
     switch (size) {
       case 'small': return 24;
@@ -43,6 +51,7 @@ export const IngredientIcon: React.FC<IngredientIconProps> = ({
   const spriteCode = getIngredientSpriteCode(name);
 
   const formatLabel = () => {
+    // ... (existing label logic)
     if (!showLabel || (!amount && !unit)) return null;
     const parts: string[] = [];
     if (amount) parts.push(amount);
@@ -54,6 +63,20 @@ export const IngredientIcon: React.FC<IngredientIconProps> = ({
 
   const label = formatLabel();
 
+  // Helper to render the icon content (Dynamic or Sprite)
+  const renderIconContent = () => {
+    if (dynamicIconName) {
+      // Convert Iconify name (e.g. "mdi:carrot") to URL
+      // Format: https://api.iconify.design/{prefix}/{name}.svg
+      const [prefix, iconName] = dynamicIconName.split(':');
+      if (prefix && iconName) {
+        const uri = `https://api.iconify.design/${prefix}/${iconName}.svg?color=%231A1A1A`; // Default color #1A1A1A
+        return <SvgUri width={iconSize} height={iconSize} uri={uri} />;
+      }
+    }
+    return <SpriteSheetIcon spriteCode={spriteCode} size={iconSize} checked={checked} />;
+  };
+
   if (type === 'scatter') {
     return (
       <View style={styles.scatterContainer}>
@@ -63,7 +86,24 @@ export const IngredientIcon: React.FC<IngredientIconProps> = ({
           style={styles.scatterZone}
         >
           <View style={[styles.scatterDots, checked && styles.scatterChecked]}>
-            <SpriteSheetIcon spriteCode={spriteCode} size={iconSize - 8} checked={false} />
+            {dynamicIconName ? (
+              // For scatter, if dynamic, simplify to single icon for now, or repeat?
+              // Let's us single icon but smaller
+              (() => {
+                const [prefix, iconName] = dynamicIconName.split(':');
+                if (prefix && iconName) {
+                  // For scatter checked state, maybe change color? 
+                  // Iconify API supports color param.
+                  const color = checked ? '%23FF6B35' : '%231A1A1A';
+                  const uri = `https://api.iconify.design/${prefix}/${iconName}.svg?color=${color}`;
+                  return <SvgUri width={iconSize - 8} height={iconSize - 8} uri={uri} />;
+                }
+                return null;
+              })()
+            ) : (
+              <SpriteSheetIcon spriteCode={spriteCode} size={iconSize - 8} checked={false} />
+            )}
+
           </View>
           {checked && (
             <View style={styles.checkmarkOverlay}>
@@ -84,7 +124,18 @@ export const IngredientIcon: React.FC<IngredientIconProps> = ({
           activeOpacity={0.7}
           style={[styles.liquidZone, checked && styles.checked]}
         >
-          <SpriteSheetIcon spriteCode={spriteCode} size={iconSize} checked={false} />
+          {dynamicIconName ? (
+            (() => {
+              const [prefix, iconName] = dynamicIconName.split(':');
+              if (prefix && iconName) {
+                const uri = `https://api.iconify.design/${prefix}/${iconName}.svg?color=%231A1A1A`;
+                return <SvgUri width={iconSize} height={iconSize} uri={uri} />;
+              }
+              return null;
+            })()
+          ) : (
+            <SpriteSheetIcon spriteCode={spriteCode} size={iconSize} checked={false} />
+          )}
           <View style={styles.wavePattern} />
           {checked && (
             <View style={styles.checkmarkOverlay}>
@@ -103,7 +154,22 @@ export const IngredientIcon: React.FC<IngredientIconProps> = ({
         onPress={onPress}
         activeOpacity={0.7}
       >
-        <SpriteSheetIcon spriteCode={spriteCode} size={iconSize} checked={checked} />
+        {dynamicIconName ? (
+          (() => {
+            const [prefix, iconName] = dynamicIconName.split(':');
+            if (prefix && iconName) {
+              // If checked, maybe tint? SpriteSheetIcon handles its own checked state (opacity/grayscale?).
+              // SpriteSheetIcon implementation: 
+              // It uses `checked` prop but implementation of `SpriteSheetIcon` wasn't shown fully to see how it affects visual.
+              // Assuming for now simple render.
+              const uri = `https://api.iconify.design/${prefix}/${iconName}.svg?color=%231A1A1A`;
+              return <SvgUri width={iconSize} height={iconSize} uri={uri} />;
+            }
+            return <SpriteSheetIcon spriteCode={spriteCode} size={iconSize} checked={checked} />;
+          })()
+        ) : (
+          <SpriteSheetIcon spriteCode={spriteCode} size={iconSize} checked={checked} />
+        )}
       </TouchableOpacity>
       {label && <Text style={styles.ingredientLabel}>{label}</Text>}
     </View>

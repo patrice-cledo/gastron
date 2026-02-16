@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../../services/firebase';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Ionicons } from '@expo/vector-icons';
@@ -44,7 +46,7 @@ const ChallengesScreen: React.FC = () => {
           if (stored) {
             const joinedIds = JSON.parse(stored);
             setJoinedChallengeIds(joinedIds);
-            
+
             // Create active challenges from joined IDs
             const active = allChallenges
               .filter(ch => joinedIds.includes(ch.id))
@@ -63,73 +65,35 @@ const ChallengesScreen: React.FC = () => {
     }, [])
   );
 
-  const allChallenges: Challenge[] = [
-    {
-      id: '1',
-      title: 'Spice Master',
-      description: 'Cook 5 Recipes That Contain Storecupboard Spices',
-      participants: 1980,
-      profileEmoji: '👨‍🍳',
-      backgroundColor: '#B8E6D3',
-    },
-    {
-      id: '2',
-      title: 'Middle Eastern Cuisine',
-      description: 'Cook 5 Middle Eastern recipes',
-      participants: 754,
-      profileEmoji: '👨',
-      backgroundColor: '#FFE5E5',
-    },
-    {
-      id: '3',
-      title: 'Italian Cuisine',
-      description: 'Cook 5 Italian recipes',
-      participants: 1210,
-      profileEmoji: '👨‍🍳',
-      backgroundColor: '#B8E6D3',
-      recipeCount: 5,
-    },
-    {
-      id: '4',
-      title: 'Indian Cuisine',
-      description: 'Cook 5 Indian recipes',
-      participants: 635,
-      profileEmoji: '👨',
-      backgroundColor: '#FFE5E5',
-    },
-    {
-      id: '5',
-      title: 'Anti-Huttlestorm',
-      description: 'Cook 5 recipes without huttlestorm',
-      participants: 2338,
-      profileEmoji: '👨‍🍳',
-      backgroundColor: '#FFE5E5',
-    },
-    {
-      id: '6',
-      title: 'Cupboard Creations',
-      description: 'Cook 5 recipes using only cupboard ingredients',
-      participants: 1168,
-      profileEmoji: '👨',
-      backgroundColor: '#B8E6D3',
-    },
-    {
-      id: '7',
-      title: 'Food Waste',
-      description: 'Cook 5 recipes to reduce food waste',
-      participants: 892,
-      profileEmoji: '👨‍🍳',
-      backgroundColor: '#B8E6D3',
-    },
-    {
-      id: '8',
-      title: "Cheat's",
-      description: 'Cook 5 quick and easy recipes',
-      participants: 1456,
-      profileEmoji: '👨',
-      backgroundColor: '#FFE5E5',
-    },
-  ];
+  // Fetch challenges from Firestore
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+
+  useEffect(() => {
+    // Determine which collection to use based on environment/auth if needed, 
+    // but here we just fetch 'challenges'
+    const q = collection(db, 'challenges');
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedChallenges: Challenge[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        fetchedChallenges.push({
+          id: doc.id,
+          title: data.title,
+          description: data.description,
+          participants: data.participants || 0,
+          profileEmoji: data.profileEmoji,
+          backgroundColor: data.backgroundColor,
+          recipeCount: data.recipeCount,
+        });
+      });
+      setChallenges(fetchedChallenges);
+    }, (error) => {
+      console.error("Error fetching challenges:", error);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const allChallenges: Challenge[] = challenges;
 
   // Filter out joined challenges from available challenges
   const availableChallenges = allChallenges.filter(
@@ -195,14 +159,14 @@ const ChallengesScreen: React.FC = () => {
                     </Text>
                     <View style={styles.progressContainer}>
                       <Text style={styles.progressText}>
-                        {challenge.completedRecipes}/{challenge.recipeCount} Recipes
+                        {challenge.completedRecipes}/{challenge.recipeCount || 5} Recipes
                       </Text>
                       <View style={styles.progressBarBackground}>
                         <View
                           style={[
                             styles.progressBarFill,
                             {
-                              width: `${getProgressPercentage(challenge.completedRecipes, challenge.recipeCount)}%`,
+                              width: `${getProgressPercentage(challenge.completedRecipes, challenge.recipeCount || 5)}%`,
                             },
                           ]}
                         />
@@ -216,7 +180,7 @@ const ChallengesScreen: React.FC = () => {
         )}
 
         <Text style={styles.sectionTitle}>Available Challenges</Text>
-        
+
         <View style={styles.challengesGrid}>
           {availableChallenges.map((challenge, index) => (
             <View
@@ -234,19 +198,19 @@ const ChallengesScreen: React.FC = () => {
                   {challenge.title}
                 </Text>
               </View>
-              
+
               <View style={styles.challengeStats}>
                 <Ionicons name="people-outline" size={16} color="#1A1A1A" />
                 <Text style={styles.challengeParticipants}>
                   {formatParticipants(challenge.participants)}
                 </Text>
               </View>
-              
+
               <Text style={styles.challengeDescription} numberOfLines={3}>
                 {challenge.description}
               </Text>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.learnMoreButton}
                 onPress={() => navigation.navigate('ChallengeDetail', { challengeId: challenge.id })}
               >

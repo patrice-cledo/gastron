@@ -26,10 +26,10 @@ try {
   useSuperwall = () => {
     console.warn('Superwall not available - using mock');
     return {
-      identify: async () => {},
-      reset: async () => {},
+      identify: async () => { },
+      reset: async () => { },
       user: { subscriptionStatus: 'UNKNOWN' },
-      openSubscriptionManagement: async () => {},
+      openSubscriptionManagement: async () => { },
     };
   };
 }
@@ -43,6 +43,8 @@ import './src/services/firebase';
 import { ImportModal } from './src/components/ImportModal';
 import { ImportProgressModal } from './src/components/ImportProgressModal';
 import { usePhotoImportStore } from './src/stores/photoImportStore';
+import { useIconMappings } from './src/hooks/useIconMappings';
+import { useRecipesStore } from './src/stores/recipesStore';
 import { TabNavigator } from './src/navigation/TabNavigator';
 // Onboarding screens
 import WelcomeScreen from './src/screens/onboarding/WelcomeScreen';
@@ -108,24 +110,25 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 // Inner component that can use Superwall hooks
 function AppContent() {
+  useIconMappings(); // Initialize icon mappings sync
   const photoImportStatus = usePhotoImportStore((state) => state.status);
   const photoImportProgress = usePhotoImportStore((state) => state.uploadProgress);
   const currentImportId = usePhotoImportStore((state) => state.currentImportId);
   const cancelImport = usePhotoImportStore((state) => state.cancelImport);
   const reset = usePhotoImportStore((state) => state.reset);
-  
-  const isProcessing = photoImportStatus === 'uploading' || 
-                       photoImportStatus === 'queued' || 
-                       photoImportStatus === 'ocr' || 
-                       photoImportStatus === 'extracting' || 
-                       photoImportStatus === 'ready' || 
-                       photoImportStatus === 'failed';
+
+  const isProcessing = photoImportStatus === 'uploading' ||
+    photoImportStatus === 'queued' ||
+    photoImportStatus === 'ocr' ||
+    photoImportStatus === 'extracting' ||
+    photoImportStatus === 'ready' ||
+    photoImportStatus === 'failed';
 
   // Auth state management
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [hasInitialAuthCheck, setHasInitialAuthCheck] = useState(false);
-  
+
   // Only call useSuperwall hook if it's available (will be called inside provider when available)
   let superwall: any = null;
   try {
@@ -136,20 +139,20 @@ function AppContent() {
     // Hook called outside provider - use mock
     console.warn('Superwall hook called outside provider, using mock');
     superwall = {
-      identify: async () => {},
-      reset: async () => {},
+      identify: async () => { },
+      reset: async () => { },
       user: { subscriptionStatus: 'UNKNOWN' },
-      openSubscriptionManagement: async () => {},
+      openSubscriptionManagement: async () => { },
     };
   }
 
+  // Listen to auth state changes
   useEffect(() => {
-    // Listen to auth state changes
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log('🔐 Auth state changed:', user ? `User logged in: ${user.email}` : 'User logged out');
       const authenticated = !!user;
       setIsAuthenticated(authenticated);
-      
+
       // Sync Superwall user identification (if available)
       if (superwall) {
         if (authenticated && user?.uid) {
@@ -158,7 +161,12 @@ function AppContent() {
           await resetUser(superwall);
         }
       }
-      
+
+      // Load recipes if authenticated
+      if (authenticated) {
+        useRecipesStore.getState().loadRecipesFromFirebase().catch(console.error);
+      }
+
       // Mark initial auth check as complete
       if (!hasInitialAuthCheck) {
         setHasInitialAuthCheck(true);
@@ -196,434 +204,434 @@ function AppContent() {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-        <SafeAreaProvider>
-          <BottomSheetModalProvider>
+      <SafeAreaProvider>
+        <BottomSheetModalProvider>
           <ThemeProvider>
             <ModalProvider>
-                  <NavigationContainer ref={navigationRef}>
-                  <Stack.Navigator
-                    initialRouteName={isAuthenticated ? "Home" : "Welcome"}
-                    screenOptions={{
-                      headerShown: false,
-                      contentStyle: { backgroundColor: '#1A1A1A' },
+              <NavigationContainer ref={navigationRef}>
+                <Stack.Navigator
+                  initialRouteName={isAuthenticated ? "Home" : "Welcome"}
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: '#1A1A1A' },
+                  }}
+                >
+                  <Stack.Screen
+                    name="Welcome"
+                    component={WelcomeScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#F5F5F0' },
                     }}
-                  >
-                <Stack.Screen 
-                  name="Welcome" 
-                  component={WelcomeScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#F5F5F0' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="GetStarted" 
-                  component={GetStartedScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFD700' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="DietaryPreferences" 
-                  component={DietaryPreferencesScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="Servings" 
-                  component={ServingsScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="Cuisines" 
-                  component={CuisinesScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="RecipeSources" 
-                  component={RecipeSourcesScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="Ingredients" 
-                  component={IngredientsScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="HelpNeeded" 
-                  component={HelpNeededScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="OtherHelp" 
-                  component={OtherHelpScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="FeaturedRecipes" 
-                  component={FeaturedRecipesScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="SignUp" 
-                  component={SignUpScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="EmailSignUp" 
-                  component={EmailSignUpScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="Login" 
-                  component={LoginScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="EmailLogin" 
-                  component={EmailLoginScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="CodeVerification" 
-                  component={CodeVerificationScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                {/* Post-signup onboarding flow */}
-                <Stack.Screen 
-                  name="NotificationIntro" 
-                  component={NotificationIntroScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#1A1A1A' },
-                    headerShown: false,
-                  }}
-                />
-                <Stack.Screen 
-                  name="NotificationPermission" 
-                  component={NotificationPermissionScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#000000' },
-                    headerShown: false,
-                  }}
-                />
-                <Stack.Screen 
-                  name="CreateCollectionIntro" 
-                  component={CreateCollectionIntroScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#1A1A1A' },
-                    headerShown: false,
-                  }}
-                />
-                <Stack.Screen 
-                  name="CreateCollectionForm" 
-                  component={CreateCollectionFormScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#1A1A1A' },
-                    headerShown: false,
-                  }}
-                />
-                <Stack.Screen 
-                  name="CollectionCreated" 
-                  component={CollectionCreatedScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#1A1A1A' },
-                    headerShown: false,
-                  }}
-                />
-                <Stack.Screen 
-                  name="ShareExtensionIntro" 
-                  component={ShareExtensionIntroScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#1A1A1A' },
-                    headerShown: false,
-                  }}
-                />
-                <Stack.Screen 
-                  name="ShareExtensionInstructions" 
-                  component={ShareExtensionInstructionsScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#1A1A1A' },
-                    headerShown: false,
-                  }}
-                />
-                <Stack.Screen 
-                  name="ShareExtensionComplete" 
-                  component={ShareExtensionCompleteScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#1A1A1A' },
-                    headerShown: false,
-                  }}
-                />
-                <Stack.Screen 
-                  name="Pricing" 
-                  component={PricingScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#F5F5F0' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="Home" 
-                  component={TabNavigator}
-                  options={{
-                    contentStyle: { backgroundColor: '#F5F5F0' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="RecipeDetail" 
-                  component={RecipeDetailScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#F5F5F0' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="CookMode" 
-                  component={CookModeScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="RateAndReview" 
-                  component={RateAndReviewScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                    presentation: 'modal',
-                  }}
-                />
-                <Stack.Screen 
-                  name="Inspiration" 
-                  component={InspirationScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFF9C4' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="BrowserImport" 
-                  component={BrowserImportScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="PasteTextImport" 
-                  component={PasteTextImportScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="PhotoImport" 
-                  component={PhotoImportScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="RecipeImportPreview" 
-                  component={RecipeImportPreviewScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#F5F5F0' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="WriteRecipe" 
-                  component={WriteRecipeScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#F5F5F0' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="RecipeInfo" 
-                  component={RecipeInfoScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#F5F5F0' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="RecipeNutrition" 
-                  component={RecipeNutritionScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#F5F5F0' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="StarterRecipes" 
-                  component={StarterRecipesScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#F5F5F0' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="ChooseRecipes" 
-                  component={ChooseRecipesScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="IngredientSelection" 
-                  component={IngredientSelectionScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="Menu" 
-                  component={MenuScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="WantToCook" 
-                  component={WantToCookScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="Settings" 
-                  component={SettingsScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="Explore" 
-                  component={TrendingRecipesScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="Search" 
-                  component={SearchScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="Profile" 
-                  component={ProfileScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="Intolerances" 
-                  component={IntolerancesScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="FavouriteCuisines" 
-                  component={FavouriteCuisinesScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="DislikesAllergies" 
-                  component={DislikesAllergiesScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="ManageSubscription" 
-                  component={ManageSubscriptionScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="DeleteAccount" 
-                  component={DeleteAccountScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="IngredientSearch" 
-                  component={IngredientSearchScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="Notifications" 
-                  component={NotificationsScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="Challenges" 
-                  component={ChallengesScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="ChallengeDetail" 
-                  component={ChallengeDetailScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#B8E6D3' },
-                  }}
-                />
-                <Stack.Screen 
-                  name="AddShoppingItem" 
-                  component={AddShoppingItemScreen}
-                  options={{
-                    contentStyle: { backgroundColor: '#FFFFFF' },
-                  }}
-                />
-                  </Stack.Navigator>
-                </NavigationContainer>
-                <ImportModal />
-                <ImportProgressModal
-                  visible={isProcessing}
-                  onCancel={() => {
-                    if (photoImportStatus === 'uploading' || photoImportStatus === 'queued' || photoImportStatus === 'ocr' || photoImportStatus === 'extracting') {
-                      cancelImport();
-                      reset();
-                    } else {
-                      cancelImport();
-                      reset();
-                    }
-                  }}
-                  importId={currentImportId || undefined}
-                  status={photoImportStatus}
-                  uploadProgress={photoImportProgress}
-                />
-                <StatusBar style="dark" />
-              </ModalProvider>
-        </ThemeProvider>
+                  />
+                  <Stack.Screen
+                    name="GetStarted"
+                    component={GetStartedScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFD700' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="DietaryPreferences"
+                    component={DietaryPreferencesScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="Servings"
+                    component={ServingsScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="Cuisines"
+                    component={CuisinesScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="RecipeSources"
+                    component={RecipeSourcesScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="Ingredients"
+                    component={IngredientsScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="HelpNeeded"
+                    component={HelpNeededScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="OtherHelp"
+                    component={OtherHelpScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="FeaturedRecipes"
+                    component={FeaturedRecipesScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="SignUp"
+                    component={SignUpScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="EmailSignUp"
+                    component={EmailSignUpScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="Login"
+                    component={LoginScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="EmailLogin"
+                    component={EmailLoginScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="CodeVerification"
+                    component={CodeVerificationScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  {/* Post-signup onboarding flow */}
+                  <Stack.Screen
+                    name="NotificationIntro"
+                    component={NotificationIntroScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#1A1A1A' },
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="NotificationPermission"
+                    component={NotificationPermissionScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#000000' },
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="CreateCollectionIntro"
+                    component={CreateCollectionIntroScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#1A1A1A' },
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="CreateCollectionForm"
+                    component={CreateCollectionFormScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#1A1A1A' },
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="CollectionCreated"
+                    component={CollectionCreatedScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#1A1A1A' },
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="ShareExtensionIntro"
+                    component={ShareExtensionIntroScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#1A1A1A' },
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="ShareExtensionInstructions"
+                    component={ShareExtensionInstructionsScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#1A1A1A' },
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="ShareExtensionComplete"
+                    component={ShareExtensionCompleteScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#1A1A1A' },
+                      headerShown: false,
+                    }}
+                  />
+                  <Stack.Screen
+                    name="Pricing"
+                    component={PricingScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#F5F5F0' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="Home"
+                    component={TabNavigator}
+                    options={{
+                      contentStyle: { backgroundColor: '#F5F5F0' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="RecipeDetail"
+                    component={RecipeDetailScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#F5F5F0' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="CookMode"
+                    component={CookModeScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="RateAndReview"
+                    component={RateAndReviewScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                      presentation: 'modal',
+                    }}
+                  />
+                  <Stack.Screen
+                    name="Inspiration"
+                    component={InspirationScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFF9C4' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="BrowserImport"
+                    component={BrowserImportScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="PasteTextImport"
+                    component={PasteTextImportScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="PhotoImport"
+                    component={PhotoImportScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="RecipeImportPreview"
+                    component={RecipeImportPreviewScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#F5F5F0' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="WriteRecipe"
+                    component={WriteRecipeScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#F5F5F0' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="RecipeInfo"
+                    component={RecipeInfoScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#F5F5F0' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="RecipeNutrition"
+                    component={RecipeNutritionScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#F5F5F0' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="StarterRecipes"
+                    component={StarterRecipesScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#F5F5F0' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="ChooseRecipes"
+                    component={ChooseRecipesScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="IngredientSelection"
+                    component={IngredientSelectionScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="Menu"
+                    component={MenuScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="WantToCook"
+                    component={WantToCookScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="Settings"
+                    component={SettingsScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="Explore"
+                    component={TrendingRecipesScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="Search"
+                    component={SearchScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="Profile"
+                    component={ProfileScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="Intolerances"
+                    component={IntolerancesScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="FavouriteCuisines"
+                    component={FavouriteCuisinesScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="DislikesAllergies"
+                    component={DislikesAllergiesScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="ManageSubscription"
+                    component={ManageSubscriptionScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="DeleteAccount"
+                    component={DeleteAccountScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="IngredientSearch"
+                    component={IngredientSearchScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="Notifications"
+                    component={NotificationsScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="Challenges"
+                    component={ChallengesScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="ChallengeDetail"
+                    component={ChallengeDetailScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#B8E6D3' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="AddShoppingItem"
+                    component={AddShoppingItemScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                </Stack.Navigator>
+              </NavigationContainer>
+              <ImportModal />
+              <ImportProgressModal
+                visible={isProcessing}
+                onCancel={() => {
+                  if (photoImportStatus === 'uploading' || photoImportStatus === 'queued' || photoImportStatus === 'ocr' || photoImportStatus === 'extracting') {
+                    cancelImport();
+                    reset();
+                  } else {
+                    cancelImport();
+                    reset();
+                  }
+                }}
+                importId={currentImportId || undefined}
+                status={photoImportStatus}
+                uploadProgress={photoImportProgress}
+              />
+              <StatusBar style="dark" />
+            </ModalProvider>
+          </ThemeProvider>
         </BottomSheetModalProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
@@ -647,7 +655,7 @@ export default function App() {
       </SuperwallProvider>
     );
   }
-  
+
   // Fallback: render app without Superwall (for development/testing)
   console.warn('⚠️ Running without Superwall. To enable: npx expo run:ios');
   return <AppContent />;
