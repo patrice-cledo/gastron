@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions } from 'react-native';
+import { doc, getDoc, getDocs, query, collection, where, documentId, updateDoc, increment } from 'firebase/firestore';
+import { db } from '../../services/firebase';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,19 +18,25 @@ interface Recipe {
   title: string;
   image: string;
   dietaryBadge: { icon: string; label: string };
+  // Add other fields as needed from Firestore
 }
 
 const ChallengeDetailScreen: React.FC = () => {
   const theme = useTheme();
   const navigation = useNavigation<ChallengeDetailScreenNavigationProp>();
   const route = useRoute();
-  const challengeId = (route.params as any)?.challengeId || '1';
+  const challengeId = (route.params as any)?.challengeId;
 
   const [hasJoined, setHasJoined] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
   const [showChallengeOptionsBottomSheet, setShowChallengeOptionsBottomSheet] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const [completedRecipes, setCompletedRecipes] = useState(0);
+
+  // Challenge and Recipes State
+  const [challenge, setChallenge] = useState<any>(null);
+  const [challengeRecipes, setChallengeRecipes] = useState<Recipe[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Check if challenge is already joined and load progress
   useEffect(() => {
@@ -40,7 +48,7 @@ const ChallengeDetailScreen: React.FC = () => {
           const joinedIds = JSON.parse(stored);
           const isJoined = joinedIds.includes(challengeId);
           setHasJoined(isJoined);
-          
+
           // Load progress if joined
           if (isJoined) {
             try {
@@ -58,61 +66,124 @@ const ChallengeDetailScreen: React.FC = () => {
         console.error('Error checking joined status:', error);
       }
     };
-    checkJoinedStatus();
+    if (challengeId) {
+      checkJoinedStatus();
+    }
   }, [challengeId]);
 
   const screenWidth = Dimensions.get('window').width;
   const recipeCardWidth = screenWidth * 0.65; // Slightly wider cards for better visibility
 
-  // Mock challenge data
-  const challenge = {
-    id: challengeId,
-    title: 'Italian Cuisine',
-    subtitle: 'Cook 5 Italian Recipes',
-    description: 'Welcome to the Italian Cuisine Challenge, where simplicity meets incredible flavour. From silky pasta to rich risottos and rustic stews, Italian food is about fresh ingredients and time-honoured techniques. This challenge invites you to cook five recipes and explore the essence of Italy. It\'s time to bring a taste of la dolce vita into your kitchen!',
-    participants: 1220,
-    recipeCount: 5,
-    videoThumbnail: 'https://via.placeholder.com/400x300?text=Video+Thumbnail',
-  };
+  // Fetch challenge details and recipes
+  useEffect(() => {
+    const fetchChallengeAndRecipes = async () => {
+      if (!challengeId) return;
 
-  const recipes: Recipe[] = [
-    {
-      id: '1',
-      title: 'Tempeh & Wild Mushroom',
-      image: 'https://via.placeholder.com/300x200?text=Pasta+Dish',
-      dietaryBadge: { icon: '🍎', label: 'VE' },
-    },
-    {
-      id: '2',
-      title: 'Broccoli Pasta Tagliatelle',
-      image: 'https://via.placeholder.com/300x200?text=Tagliatelle',
-      dietaryBadge: { icon: '🥕', label: 'V' },
-    },
-    {
-      id: '3',
-      title: 'Classic Carbonara',
-      image: 'https://via.placeholder.com/300x200?text=Carbonara',
-      dietaryBadge: { icon: '🍝', label: '' },
-    },
-    {
-      id: '4',
-      title: 'Margherita Pizza',
-      image: 'https://via.placeholder.com/300x200?text=Pizza',
-      dietaryBadge: { icon: '🍕', label: 'V' },
-    },
-    {
-      id: '5',
-      title: 'Risotto ai Funghi',
-      image: 'https://via.placeholder.com/300x200?text=Risotto',
-      dietaryBadge: { icon: '🍄', label: 'V' },
-    },
-  ];
+      try {
+        const docRef = doc(db, 'challenges', challengeId);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const challengeData = { id: docSnap.id, ...docSnap.data() } as any;
+          setChallenge(challengeData);
+
+          // Fetch recipes if IDs exist
+          if (challengeData.recipeIds && challengeData.recipeIds.length > 0) {
+            try {
+              // Firestore 'in' query supports up to 10 items. 
+              // If more, we might need to chunk or fetch individually.
+              // For now assuming <= 10 or passing multiple queries.
+
+              // Helper to chunk array
+              const chunkArray = (arr: string[], size: number) => {
+                const results = [];
+                while (arr.length) {
+                  results.push(arr.splice(0, size));
+                }
+                return results;
+              };
+
+              // Work on a copy
+              const idsToFetch = [...challengeData.recipeIds];
+              // Chunk into groups of 10
+              const chunks = [];
+              while (idsToFetch.length > 0) {
+                chunks.push(idsToFetch.splice(0, 10));
+              }
+
+              const allFetchedRecipes: Recipe[] = [];
+
+              for (const chunk of chunks) {
+                const recipesQuery = query(
+                  collection(db, 'recipes'),
+                  where(documentId(), 'in', chunk)
+                );
+                const recipesSnap = await getDocs(recipesQuery);
+                const fetchedChunk = recipesSnap.docs.map(doc => {
+                  const data = doc.data();
+
+                  // Helper to determine dietary badge
+                  let badge = { icon: '🍽️', label: '' };
+                  if (data.tags) {
+                    if (data.tags.includes('Vegan')) badge = { icon: '🌱', label: 'VE' };
+                    else if (data.tags.includes('Vegetarian')) badge = { icon: '🥕', label: 'V' };
+                    else if (data.tags.includes('Gluten-free')) badge = { icon: '🌾', label: 'GF' };
+                  }
+
+                  return {
+                    id: doc.id,
+                    title: data.title,
+                    image: data.image || 'https://via.placeholder.com/300x200?text=Recipe',
+                    dietaryBadge: badge
+                  };
+                });
+                allFetchedRecipes.push(...fetchedChunk);
+              }
+
+              setChallengeRecipes(allFetchedRecipes);
+            } catch (err) {
+              console.error("Error fetching challenge recipes:", err);
+            }
+          }
+        } else {
+          console.error("No such challenge!");
+        }
+      } catch (error) {
+        console.error("Error fetching challenge details:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchChallengeAndRecipes();
+  }, [challengeId]);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: '#B8E6D3', justifyContent: 'center', alignItems: 'center' }]}>
+        <Text>Loading...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!challenge) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: '#B8E6D3', justifyContent: 'center', alignItems: 'center' }]}>
+        <Text>Challenge not found</Text>
+      </SafeAreaView>
+    );
+  }
 
   const handleJoinChallenge = async () => {
     if (!hasJoined) {
       setHasJoined(true);
       setShowNotification(true);
-      
+
+      // Optimistically update local state immediately
+      setChallenge((prev: any) => ({
+        ...prev,
+        participants: (prev.participants || 0) + 1
+      }));
+
       // Save joined challenge to AsyncStorage
       try {
         const JOINED_CHALLENGES_KEY = 'joined-challenges';
@@ -122,10 +193,25 @@ const ChallengeDetailScreen: React.FC = () => {
           joinedIds.push(challengeId);
           await AsyncStorage.setItem(JOINED_CHALLENGES_KEY, JSON.stringify(joinedIds));
         }
+
+        // Increment participants count in Firestore
+        const docRef = doc(db, 'challenges', challengeId);
+        await updateDoc(docRef, {
+          participants: increment(1)
+        });
+
       } catch (error) {
         console.error('Error saving joined challenge:', error);
+        // Revert local state on error
+        setChallenge((prev: any) => ({
+          ...prev,
+          participants: Math.max(0, (prev.participants || 0) - 1)
+        }));
+        setHasJoined(false);
+        alert('Failed to join challenge. Please try again.');
+        setShowNotification(false);
       }
-      
+
       // Hide notification after 3 seconds
       setTimeout(() => {
         setShowNotification(false);
@@ -134,19 +220,24 @@ const ChallengeDetailScreen: React.FC = () => {
   };
 
   const formatParticipants = (count: number) => {
-    return count.toLocaleString();
+    return Math.max(0, count || 0).toLocaleString();
   };
 
   const isScrolled = scrollY > 200; // Show collapsible header after scrolling past video
-  const progressPercentage = challenge.recipeCount > 0 
-    ? (completedRecipes / challenge.recipeCount) * 100 
+  const progressPercentage = challenge.recipeCount > 0
+    ? (completedRecipes / challenge.recipeCount) * 100
     : 0;
 
+  // Use coverImage if available, else videoThumbnail
+  const coverImageSource = challenge.coverImage
+    ? { uri: challenge.coverImage }
+    : (challenge.videoThumbnail ? { uri: challenge.videoThumbnail } : null);
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: '#B8E6D3' }]} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: challenge.backgroundColor || '#B8E6D3' }]} edges={['top']}>
       {/* Collapsible Header - Shows when scrolled */}
       {isScrolled && (
-        <View style={styles.collapsibleHeader}>
+        <View style={[styles.collapsibleHeader, { backgroundColor: challenge.backgroundColor || '#B8E6D3' }]}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
@@ -154,7 +245,7 @@ const ChallengeDetailScreen: React.FC = () => {
             <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
           </TouchableOpacity>
           <Text style={styles.collapsibleHeaderTitle}>{challenge.title}</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.menuButton}
             onPress={() => setShowChallengeOptionsBottomSheet(true)}
           >
@@ -165,7 +256,7 @@ const ChallengeDetailScreen: React.FC = () => {
 
       {/* Default Header - Shows when not scrolled */}
       {!isScrolled && (
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: challenge.backgroundColor || '#B8E6D3' }]}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
@@ -173,7 +264,7 @@ const ChallengeDetailScreen: React.FC = () => {
             <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
           </TouchableOpacity>
           <View style={styles.headerSpacer} />
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.menuButton}
             onPress={() => setShowChallengeOptionsBottomSheet(true)}
           >
@@ -202,112 +293,131 @@ const ChallengeDetailScreen: React.FC = () => {
         }}
         scrollEventThrottle={16}
       >
-        {/* Video Thumbnail */}
-        <View style={styles.videoContainer}>
-          <Image
-            source={{ uri: challenge.videoThumbnail }}
-            style={styles.videoThumbnail}
-            resizeMode="cover"
-          />
-          <TouchableOpacity style={styles.playButton}>
-            <View style={styles.playButtonCircle}>
-              <Ionicons name="play" size={32} color="#1A1A1A" />
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* Challenge Title */}
-        <Text style={styles.challengeTitle}>{challenge.title}</Text>
-        <Text style={styles.challengeSubtitle}>{challenge.subtitle}</Text>
-
-        {/* Statistics */}
-        <View style={styles.statsContainer}>
-          <View style={styles.statBadge}>
-            <Ionicons name="people-outline" size={16} color="#1A1A1A" />
-            <Text style={styles.statText}>{formatParticipants(challenge.participants)}</Text>
-          </View>
-          <View style={styles.statBadge}>
-            <Ionicons name="document-text-outline" size={16} color="#1A1A1A" />
-            <Text style={styles.statText}>{challenge.recipeCount} Recipes</Text>
-          </View>
-        </View>
-
-        {/* Description */}
-        <Text style={styles.description}>{challenge.description}</Text>
-
-        {/* Progress Section - Only show if joined */}
-        {hasJoined && (
-          <View style={styles.progressSection}>
-            <Text style={styles.progressText}>
-              {completedRecipes}/{challenge.recipeCount} Recipes
-            </Text>
-            <View style={styles.progressBarContainer}>
-              <View style={styles.progressBarBackground}>
-                <View
-                  style={[
-                    styles.progressBarFill,
-                    { width: `${progressPercentage}%` },
-                  ]}
-                />
-              </View>
-              <Text style={styles.progressActionText}>GET COOKING!</Text>
-            </View>
-          </View>
-        )}
-
-        {/* Join Challenge Button */}
-        <TouchableOpacity
-          style={[styles.joinButton, hasJoined && styles.joinButtonJoined]}
-          onPress={handleJoinChallenge}
-        >
-          <Ionicons name={hasJoined ? "checkmark" : "add"} size={20} color="#FFFFFF" />
-          <Text style={styles.joinButtonText}>
-            {hasJoined ? 'JOINED' : 'JOIN CHALLENGE'}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Recipes Section */}
-        <Text style={styles.recipesSectionTitle}>
-          You'll pick from these recipes to complete this challenge:
-        </Text>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.recipesScrollContent}
-        >
-          {recipes.map((recipe) => (
-            <TouchableOpacity
-              key={recipe.id}
-              style={[styles.recipeCard, { width: recipeCardWidth }]}
-              onPress={() => navigation.navigate('RecipeDetail', { recipeId: recipe.id })}
-            >
+        <View style={{ paddingBottom: 24 }}>
+          {/* Helper/Image Container */}
+          {coverImageSource && (
+            <View style={styles.videoContainer}>
               <Image
-                source={{ uri: recipe.image }}
-                style={styles.recipeImage}
+                source={coverImageSource}
+                style={styles.videoThumbnail}
                 resizeMode="cover"
               />
-              <View style={styles.recipeBadge}>
-                <Text style={styles.recipeBadgeIcon}>{recipe.dietaryBadge.icon}</Text>
-                {recipe.dietaryBadge.label && (
-                  <Text style={styles.recipeBadgeText}>{recipe.dietaryBadge.label}</Text>
-                )}
+              {/* Show play button only if it's explicitly a video thumbnail (or maybe logic varies) 
+                  For now hiding play button if using coverImage primarily as an image header
+              */}
+              {!challenge.coverImage && challenge.videoThumbnail && (
+                <TouchableOpacity style={styles.playButton}>
+                  <View style={styles.playButtonCircle}>
+                    <Ionicons name="play" size={32} color="#1A1A1A" />
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {/* Challenge Title */}
+          <Text style={styles.challengeTitle}>{challenge.title}</Text>
+          <Text style={styles.challengeSubtitle}>{challenge.subtitle}</Text>
+
+          {/* Statistics */}
+          <View style={styles.statsContainer}>
+            <View style={styles.statBadge}>
+              <Ionicons name="people-outline" size={16} color="#1A1A1A" />
+              <Text style={styles.statText}>{formatParticipants(challenge.participants)}</Text>
+            </View>
+            <View style={styles.statBadge}>
+              <Ionicons name="document-text-outline" size={16} color="#1A1A1A" />
+              <Text style={styles.statText}>{challenge.recipeCount} Recipes</Text>
+            </View>
+          </View>
+
+          {/* Description */}
+          <Text style={styles.description}>{challenge.description}</Text>
+
+          {/* Progress Section - Only show if joined */}
+          {hasJoined && (
+            <View style={[styles.progressSection, { backgroundColor: challenge.backgroundColor || '#B8E6D3' }]}>
+              <Text style={styles.progressText}>
+                {completedRecipes}/{challenge.recipeCount} Recipes
+              </Text>
+              <View style={styles.progressBarContainer}>
+                <View style={styles.progressBarBackground}>
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      { width: `${progressPercentage}%` },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.progressActionText}>GET COOKING!</Text>
               </View>
-              <TouchableOpacity
-                style={styles.recipeAddButton}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  // TODO: Handle add recipe to meal plan
-                }}
-              >
-                <Ionicons name="add" size={20} color="#1A1A1A" />
-              </TouchableOpacity>
-              <Text style={styles.recipeTitle} numberOfLines={2}>
-                {recipe.title}
+            </View>
+          )}
+
+          {/* Join Challenge Button - Only show if not joined */}
+          {!hasJoined && (
+            <TouchableOpacity
+              style={styles.joinButton}
+              onPress={handleJoinChallenge}
+            >
+              <Ionicons name="add" size={20} color="#FFFFFF" />
+              <Text style={styles.joinButtonText}>
+                JOIN CHALLENGE
               </Text>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
+          )}
+        </View>
+
+        {/* Recipes Section - White Background */}
+        <View style={styles.recipesSectionContainer}>
+          <Text style={styles.recipesSectionTitle}>
+            You'll pick from these recipes to complete this challenge:
+          </Text>
+
+          {challengeRecipes.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.recipesScrollContent}
+            >
+              {challengeRecipes.map((recipe) => (
+                <TouchableOpacity
+                  key={recipe.id}
+                  style={[styles.recipeCard, { width: recipeCardWidth }]}
+                  onPress={() => navigation.navigate('RecipeDetail', { recipeId: recipe.id })}
+                >
+                  <Image
+                    source={{ uri: recipe.image }}
+                    style={styles.recipeImage}
+                    resizeMode="cover"
+                  />
+                  <View style={[styles.recipeBadge, { backgroundColor: challenge.backgroundColor || '#B8E6D3' }]}>
+                    <Text style={styles.recipeBadgeIcon}>{recipe.dietaryBadge.icon}</Text>
+                    {recipe.dietaryBadge.label && (
+                      <Text style={styles.recipeBadgeText}>{recipe.dietaryBadge.label}</Text>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    style={styles.recipeAddButton}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      // TODO: Handle add recipe to meal plan
+                    }}
+                  >
+                    <Ionicons name="add" size={20} color="#1A1A1A" />
+                  </TouchableOpacity>
+                  <Text style={styles.recipeTitle} numberOfLines={2}>
+                    {recipe.title}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          ) : (
+            <Text style={{ marginHorizontal: 16, color: '#666', fontStyle: 'italic', marginBottom: 24 }}>
+              No specific recipes assigned yet.
+            </Text>
+          )}
+        </View>
       </ScrollView>
 
       {/* Challenge Options Bottom Sheet */}
@@ -339,7 +449,22 @@ const ChallengeDetailScreen: React.FC = () => {
                     const joinedIds = JSON.parse(stored);
                     const updatedIds = joinedIds.filter((id: string) => id !== challengeId);
                     await AsyncStorage.setItem(JOINED_CHALLENGES_KEY, JSON.stringify(updatedIds));
+                    // Update local state
                     setHasJoined(false);
+
+                    // Decrement participants count in Firestore ONLY if > 0
+                    if ((challenge?.participants || 0) > 0) {
+                      const docRef = doc(db, 'challenges', challengeId);
+                      await updateDoc(docRef, {
+                        participants: increment(-1)
+                      });
+                    }
+
+                    // Optimistically update local state ensuring no negative count
+                    setChallenge((prev: any) => ({
+                      ...prev,
+                      participants: Math.max(0, (prev.participants || 0) - 1)
+                    }));
                   }
                 } catch (error) {
                   console.error('Error leaving challenge:', error);
@@ -369,7 +494,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 12,
-    backgroundColor: '#B8E6D3',
   },
   collapsibleHeader: {
     flexDirection: 'row',
@@ -378,7 +502,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 12,
-    backgroundColor: '#B8E6D3',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0, 0, 0, 0.1)',
   },
@@ -429,16 +552,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 0,
+    flexGrow: 1,
   },
   videoContainer: {
-    width: '100%',
+    width: Dimensions.get('window').width - 32,
+    alignSelf: 'center',
     aspectRatio: 16 / 9,
     borderRadius: 12,
     overflow: 'hidden',
-    marginHorizontal: 16,
     marginTop: 16,
     position: 'relative',
+    backgroundColor: '#F0F0F0',
   },
   videoThumbnail: {
     width: '100%',
@@ -511,7 +636,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginHorizontal: 16,
     padding: 16,
-    backgroundColor: '#B8E6D3',
+    // backgroundColor set dynamically
     borderRadius: 12,
   },
   progressText: {
@@ -564,11 +689,21 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     textTransform: 'uppercase',
   },
+  recipesSectionContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 16,
+    paddingBottom: 60, // Increased to ensure safe area coverage
+    marginTop: 8,
+    minHeight: 300,
+    flex: 1,
+  },
   recipesSectionTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#1A1A1A',
-    marginTop: 32,
+    marginTop: 16,
     marginHorizontal: 16,
     marginBottom: 16,
   },
@@ -592,7 +727,7 @@ const styles = StyleSheet.create({
     left: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#B8E6D3',
+    // backgroundColor set dynamically
     borderRadius: 16,
     paddingHorizontal: 8,
     paddingVertical: 4,

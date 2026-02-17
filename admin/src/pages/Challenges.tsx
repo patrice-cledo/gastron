@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { useState, useEffect, useRef } from 'react';
+import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, where } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../firebase';
+import type { UserRecipe } from '@backend/types';
 
 interface Challenge {
     id: string;
@@ -10,12 +12,17 @@ interface Challenge {
     profileEmoji: string;
     backgroundColor: string;
     recipeCount: number;
+    coverImage?: string;
+    recipeIds?: string[];
 }
 
 export function Challenges() {
     const [challenges, setChallenges] = useState<Challenge[]>([]);
+    const [allRecipes, setAllRecipes] = useState<UserRecipe[]>([]);
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Form State
     const [formData, setFormData] = useState<Omit<Challenge, 'id' | 'participants'>>({
@@ -23,39 +30,88 @@ export function Challenges() {
         description: '',
         profileEmoji: '👨‍🍳',
         backgroundColor: '#FFE5E5',
-        recipeCount: 5,
+        recipeCount: 0,
+        coverImage: '',
+        recipeIds: []
     });
 
-    const fetchChallenges = async () => {
+    const fetchData = async () => {
         try {
-            const querySnapshot = await getDocs(collection(db, 'challenges'));
-            const fetchedChallenges = querySnapshot.docs.map(doc => ({
+            const [challengesSnapshot, recipesSnapshot] = await Promise.all([
+                getDocs(collection(db, 'challenges')),
+                // Only fetch public recipes to avoid permission errors and logically correct behavior
+                getDocs(query(collection(db, 'recipes'), where('isPublic', '==', true)))
+            ]);
+
+            const fetchedChallenges = challengesSnapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             })) as Challenge[];
             setChallenges(fetchedChallenges);
+
+            const fetchedRecipes = recipesSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            })) as UserRecipe[];
+            setAllRecipes(fetchedRecipes);
+
         } catch (error) {
-            console.error("Error fetching challenges: ", error);
+            console.error("Error fetching data: ", error);
         } finally {
             setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchChallenges();
+        fetchData();
     }, []);
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploading(true);
+        try {
+            const storageRef = ref(storage, `challenges/${Date.now()}_${file.name}`);
+            await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(storageRef);
+            setFormData(prev => ({ ...prev, coverImage: downloadURL }));
+        } catch (error) {
+            console.error("Error uploading image: ", error);
+            alert("Failed to upload image");
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const toggleRecipeSelection = (recipeId: string) => {
+        setFormData(prev => {
+            const currentIds = prev.recipeIds || [];
+            if (currentIds.includes(recipeId)) {
+                return { ...prev, recipeIds: currentIds.filter(id => id !== recipeId) };
+            } else {
+                return { ...prev, recipeIds: [...currentIds, recipeId] };
+            }
+        });
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
+            // Recipe count is strictly based on assigned recipes
+            const recipeCount = formData.recipeIds?.length || 0;
+
+            const dataToSave = {
+                ...formData,
+                recipeCount
+            };
+
             if (isEditing) {
-                await updateDoc(doc(db, 'challenges', isEditing), {
-                    ...formData
-                });
+                await updateDoc(doc(db, 'challenges', isEditing), dataToSave);
                 setIsEditing(null);
             } else {
                 await addDoc(collection(db, 'challenges'), {
-                    ...formData,
+                    ...dataToSave,
                     participants: 0 // Default start
                 });
             }
@@ -66,9 +122,12 @@ export function Challenges() {
                 description: '',
                 profileEmoji: '👨‍🍳',
                 backgroundColor: '#FFE5E5',
-                recipeCount: 5,
+                recipeCount: 0,
+                coverImage: '',
+                recipeIds: []
             });
-            fetchChallenges();
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            fetchData();
         } catch (error) {
             console.error("Error saving challenge: ", error);
         }
@@ -78,7 +137,7 @@ export function Challenges() {
         if (window.confirm('Are you sure you want to delete this challenge?')) {
             try {
                 await deleteDoc(doc(db, 'challenges', id));
-                fetchChallenges();
+                fetchData();
             } catch (error) {
                 console.error("Error deleting challenge: ", error);
             }
@@ -92,7 +151,9 @@ export function Challenges() {
             description: challenge.description,
             profileEmoji: challenge.profileEmoji,
             backgroundColor: challenge.backgroundColor,
-            recipeCount: challenge.recipeCount || 5
+            recipeCount: challenge.recipeCount || 0,
+            coverImage: challenge.coverImage || '',
+            recipeIds: challenge.recipeIds || []
         });
     };
 
@@ -103,8 +164,11 @@ export function Challenges() {
             description: '',
             profileEmoji: '👨‍🍳',
             backgroundColor: '#FFE5E5',
-            recipeCount: 5,
+            recipeCount: 0,
+            coverImage: '',
+            recipeIds: []
         });
+        if (fileInputRef.current) fileInputRef.current.value = '';
     }
 
     return (
@@ -116,9 +180,39 @@ export function Challenges() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Form Section */}
                 <div className="lg:col-span-1">
-                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 sticky top-6">
                         <h2 className="text-lg font-semibold mb-4">{isEditing ? 'Edit Challenge' : 'Create Challenge'}</h2>
                         <form onSubmit={handleSubmit} className="space-y-4">
+                            {isEditing && (
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700">Cover Image</label>
+                                    <div className="mt-1 flex items-center gap-4">
+                                        {formData.coverImage && (
+                                            <img
+                                                src={formData.coverImage}
+                                                alt="Cover"
+                                                className="w-16 h-16 object-cover rounded-lg"
+                                            />
+                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={uploading}
+                                            className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                                        >
+                                            {uploading ? 'Uploading...' : 'Upload Image'}
+                                        </button>
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            onChange={handleImageUpload}
+                                            accept="image/*"
+                                            className="hidden"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Title</label>
                                 <input
@@ -157,16 +251,12 @@ export function Challenges() {
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Recipes Count</label>
-                                    <input
-                                        type="number"
-                                        required
-                                        min={1}
-                                        value={formData.recipeCount}
-                                        onChange={e => setFormData({ ...formData, recipeCount: parseInt(e.target.value) })}
-                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm border p-2"
-                                    />
+                                    <div className="mt-1 py-2 px-3 bg-gray-50 border border-gray-300 rounded-md text-sm text-gray-500">
+                                        {formData.recipeIds?.length || 0} (Auto-calculated)
+                                    </div>
                                 </div>
                             </div>
+
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Background Color</label>
@@ -189,9 +279,38 @@ export function Challenges() {
                                 </div>
                             </div>
 
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Assign Recipes</label>
+                                <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-md bg-gray-50 p-2 space-y-1">
+                                    {allRecipes.map(recipe => (
+                                        <div
+                                            key={recipe.id}
+                                            onClick={() => toggleRecipeSelection(recipe.id)}
+                                            className={`flex items-center p-2 rounded cursor-pointer hover:bg-white transition-colors ${formData.recipeIds?.includes(recipe.id) ? 'bg-white border-l-4 border-primary shadow-sm' : ''}`}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.recipeIds?.includes(recipe.id) || false}
+                                                onChange={() => { }} // Handled by div click
+                                                className="mr-3 h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-medium text-gray-900 truncate">
+                                                    {recipe.title}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Selected: {formData.recipeIds?.length || 0} recipes
+                                </p>
+                            </div>
+
                             <div className="pt-2 flex gap-2">
                                 <button
                                     type="submit"
+                                    disabled={uploading}
                                     className="flex-1 bg-black text-white px-4 py-2 rounded-md hover:bg-gray-800 disabled:opacity-50"
                                 >
                                     {isEditing ? 'Update' : 'Create'}
@@ -227,7 +346,7 @@ export function Challenges() {
                                     style={{ backgroundColor: challenge.backgroundColor }}
                                 >
                                     <div className="flex justify-between items-start mb-2">
-                                        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-xl">
+                                        <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-xl overflow-hidden">
                                             {challenge.profileEmoji}
                                         </div>
                                         <div className="flex gap-2">
@@ -247,6 +366,12 @@ export function Challenges() {
                                             </button>
                                         </div>
                                     </div>
+
+                                    {challenge.coverImage && (
+                                        <div className="w-full h-32 mb-3 rounded-lg overflow-hidden">
+                                            <img src={challenge.coverImage} alt={challenge.title} className="w-full h-full object-cover" />
+                                        </div>
+                                    )}
 
                                     <h3 className="font-bold text-gray-900 mb-1">{challenge.title}</h3>
                                     <p className="text-sm text-gray-700 mb-3 line-clamp-2">{challenge.description}</p>

@@ -68,6 +68,15 @@ service firebase.storage {
       // Users can delete their own review images
       allow delete: if isOwner(userId);
     }
+
+    // Challenge images: authenticated users (admins) can upload
+    // Path: challenges/{filename}
+    match /challenges/{fileName} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && 
+        request.resource.size < 5 * 1024 * 1024 && // 5MB max file size
+        request.resource.contentType.matches('image/.*'); // Only images
+    }
     
     // Deny all other paths by default
     match /{allPaths=**} {

@@ -44,18 +44,9 @@ const ChallengesScreen: React.FC = () => {
         try {
           const stored = await AsyncStorage.getItem(JOINED_CHALLENGES_KEY);
           if (stored) {
-            const joinedIds = JSON.parse(stored);
-            setJoinedChallengeIds(joinedIds);
-
-            // Create active challenges from joined IDs
-            const active = allChallenges
-              .filter(ch => joinedIds.includes(ch.id))
-              .map(ch => ({
-                ...ch,
-                completedRecipes: 0, // TODO: Load actual progress from storage
-                recipeCount: ch.recipeCount || 5,
-              }));
-            setActiveChallenges(active);
+            setJoinedChallengeIds(JSON.parse(stored));
+          } else {
+            setJoinedChallengeIds([]);
           }
         } catch (error) {
           console.error('Error loading joined challenges:', error);
@@ -69,8 +60,6 @@ const ChallengesScreen: React.FC = () => {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
 
   useEffect(() => {
-    // Determine which collection to use based on environment/auth if needed, 
-    // but here we just fetch 'challenges'
     const q = collection(db, 'challenges');
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetchedChallenges: Challenge[] = [];
@@ -93,6 +82,43 @@ const ChallengesScreen: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
+  // Calculate active and available challenges when data changes
+  useEffect(() => {
+    const updateChaileges = async () => {
+      const active: ActiveChallenge[] = [];
+      const available: Challenge[] = [];
+
+      for (const challenge of challenges) {
+        if (joinedChallengeIds.includes(challenge.id)) {
+          // Fetch progress
+          let completed = 0;
+          try {
+            const progressKey = `challenge-progress-${challenge.id}`;
+            const progressStored = await AsyncStorage.getItem(progressKey);
+            if (progressStored) {
+              completed = parseInt(progressStored, 10);
+            }
+          } catch (e) {
+            console.error("Error loading progress for", challenge.id, e);
+          }
+
+          active.push({
+            ...challenge,
+            completedRecipes: completed,
+            recipeCount: challenge.recipeCount || 5
+          });
+        } else {
+          available.push(challenge);
+        }
+      }
+
+      setActiveChallenges(active);
+      // setAvailableChallenges(available) - we can just derive this but we need a state for it if we want to sort/filter
+      // For now, let's just use derived variable for available if possible, or state if we want better control
+    }
+    updateChaileges();
+  }, [challenges, joinedChallengeIds]);
+
   const allChallenges: Challenge[] = challenges;
 
   // Filter out joined challenges from available challenges
@@ -101,7 +127,7 @@ const ChallengesScreen: React.FC = () => {
   );
 
   const formatParticipants = (count: number) => {
-    return count.toLocaleString();
+    return Math.max(0, count || 0).toLocaleString();
   };
 
   const getProgressPercentage = (completed: number, total: number) => {

@@ -23,7 +23,7 @@ import { useModal } from '../../context/ModalContext';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { storage, db, auth, functions } from '../../services/firebase';
 import { httpsCallable } from 'firebase/functions';
-import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type RecipesScreenNavigationProp = CompositeNavigationProp<
@@ -44,7 +44,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
   const { showImportModal } = useModal();
   const { dietaryPreference, intolerances, favouriteCuisines, dislikesAllergies } = useUserPreferencesStore();
   const { hasUnreadMessages } = useNotificationsStore();
-  
+
   // Message IDs - should match the ones in NotificationsScreen
   const messageIds = ['1', '2', '3', '4'];
   const hasUnread = hasUnreadMessages(messageIds);
@@ -92,7 +92,43 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
   const [showCreateCollection, setShowCreateCollection] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
   const [selectedRecipeForCollection, setSelectedRecipeForCollection] = useState<Recipe | null>(null);
-  
+
+  // Challenges state
+  interface Challenge {
+    id: string;
+    title: string;
+    description: string;
+    participants: number;
+    profileEmoji: string;
+    backgroundColor: string;
+    recipeCount: number;
+  }
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+
+  // Fetch challenges
+  useEffect(() => {
+    const q = collection(db, 'challenges');
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedChallenges: Challenge[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        fetchedChallenges.push({
+          id: doc.id,
+          title: data.title,
+          description: data.description,
+          participants: data.participants || 0,
+          profileEmoji: data.profileEmoji,
+          backgroundColor: data.backgroundColor,
+          recipeCount: data.recipeCount,
+        });
+      });
+      setChallenges(fetchedChallenges);
+    }, (error) => {
+      console.error("Error fetching challenges:", error);
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Shared ingredient list
   const ALL_INGREDIENTS = [
     { id: 'egg', label: 'Egg', icon: '🥚' },
@@ -114,7 +150,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
     { id: 'cheese', label: 'Cheese', icon: '🧀' },
     { id: 'bell-pepper', label: 'Bell Pepper', icon: '🫑' },
   ];
-  
+
   // Animation values for inspiration
   // Animation refs for inspiration animation
   const dot1Opacity = useRef(new Animated.Value(0.3)).current;
@@ -123,12 +159,12 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
 
   // Helper to check if a string is a storage path (not a URL)
   const isStoragePath = (image: string): boolean => {
-    return typeof image === 'string' && 
-           !image.startsWith('http://') && 
-           !image.startsWith('https://') &&
-           !image.startsWith('file://') &&
-           !image.startsWith('content://') &&
-           image.includes('/');
+    return typeof image === 'string' &&
+      !image.startsWith('http://') &&
+      !image.startsWith('https://') &&
+      !image.startsWith('file://') &&
+      !image.startsWith('content://') &&
+      image.includes('/');
   };
 
   // Convert storage path to download URL
@@ -241,10 +277,10 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
     const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust to Monday
     const monday = new Date(today);
     monday.setDate(today.getDate() + diff);
-    
+
     // Add week offset (7 days per week)
     monday.setDate(monday.getDate() + (offset * 7));
-    
+
     const week = [];
     for (let i = 0; i < 7; i++) {
       const date = new Date(monday);
@@ -333,7 +369,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
     if (newMealPlan.includeInGrocery && selectedRecipeForMenu.ingredients && selectedRecipeForMenu.ingredients.length > 0) {
       const recipeServings = selectedRecipeForMenu.servings || 4;
       const targetServings = newMealPlan.servingsOverride || recipeServings;
-      
+
       // Adjust ingredients based on servings
       const adjustedIngredients = selectedRecipeForMenu.ingredients.map(ing => ({
         ...ing,
@@ -407,7 +443,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
         const tags = recipe.tags || [];
         const preferenceLower = dietaryPreference.toLowerCase();
         return tags.some(tag => tag.toLowerCase().includes(preferenceLower)) ||
-               recipe.title.toLowerCase().includes(preferenceLower);
+          recipe.title.toLowerCase().includes(preferenceLower);
       });
     }
 
@@ -417,7 +453,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
       filtered = filtered.filter(recipe => {
         const tags = recipe.tags || [];
         const titleLower = recipe.title.toLowerCase();
-        return cuisines.some(cuisine => 
+        return cuisines.some(cuisine =>
           tags.some(tag => tag.toLowerCase().includes(cuisine)) ||
           titleLower.includes(cuisine)
         );
@@ -429,7 +465,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
       const dislikes = dislikesAllergies.split(',').map(d => d.trim().toLowerCase());
       filtered = filtered.filter(recipe => {
         const ingredients = recipe.ingredients || [];
-        const ingredientText = ingredients.map(ing => 
+        const ingredientText = ingredients.map(ing =>
           (typeof ing === 'string' ? ing : ing.name || '').toLowerCase()
         ).join(' ');
         return !dislikes.some(dislike => ingredientText.includes(dislike));
@@ -442,15 +478,15 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
       filtered = filtered.filter(recipe => {
         const tags = recipe.tags || [];
         const ingredients = recipe.ingredients || [];
-        const ingredientText = ingredients.map(ing => 
+        const ingredientText = ingredients.map(ing =>
           (typeof ing === 'string' ? ing : ing.name || '').toLowerCase()
         ).join(' ');
-        
+
         // Check if recipe contains any intolerances
         return !intoleranceList.some(intolerance => {
           const intoleranceLower = intolerance.toLowerCase();
           return tags.some(tag => tag.toLowerCase().includes(intoleranceLower)) ||
-                 ingredientText.includes(intoleranceLower);
+            ingredientText.includes(intoleranceLower);
         });
       });
     }
@@ -587,7 +623,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
           if (stored) {
             const joinedIds = JSON.parse(stored);
             setJoinedChallengeIds(joinedIds);
-            
+
             // Load progress for each joined challenge
             const progress: { [key: string]: number } = {};
             for (const id of joinedIds) {
@@ -612,14 +648,14 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
       loadJoinedChallenges();
     }, [])
   );
-  
+
   // Mock data for What's New and Our Picks
   // Ensure we always have at least 2 items for What's New, duplicating if needed
-  const whatsNewRecipes = allRecipes.length >= 2 
+  const whatsNewRecipes = allRecipes.length >= 2
     ? allRecipes.slice(0, 2)
     : allRecipes.length === 1
-    ? [allRecipes[0], allRecipes[0]] // Duplicate the single recipe
-    : []; // Fallback if no recipes
+      ? [allRecipes[0], allRecipes[0]] // Duplicate the single recipe
+      : []; // Fallback if no recipes
   const myRecipes = allRecipes; // All user recipes
   const ourPicks = allRecipes.slice(0, 2); // Mock "Our Picks"
 
@@ -630,7 +666,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
   const wrapperPadding = 16 * 2; // Left and right padding of wrapper
   const gapTotal = 12 * 3; // 3 gaps between 4 items
   const squareSize = (screenWidth - sectionPadding - wrapperPadding - gapTotal) / 4;
-  
+
   // Calculate What's New card width (half screen width minus padding and gap)
   const whatsNewCardWidth = (screenWidth - sectionPadding - 12) / 2; // 12px gap between cards
 
@@ -653,7 +689,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
   // Find meal plan for today
   const todayDate = getTodayDate();
   const todayMealPlans = mealPlans.filter(plan => plan.date === todayDate);
-  
+
   // Prioritize meal types: dinner > lunch > breakfast > snack
   const mealTypePriority: Record<string, number> = {
     dinner: 1,
@@ -661,11 +697,11 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
     breakfast: 3,
     snack: 4,
   };
-  
+
   const todaysMealPlan = todayMealPlans.length > 0
-    ? todayMealPlans.sort((a, b) => 
-        (mealTypePriority[a.mealType] || 99) - (mealTypePriority[b.mealType] || 99)
-      )[0]
+    ? todayMealPlans.sort((a, b) =>
+      (mealTypePriority[a.mealType] || 99) - (mealTypePriority[b.mealType] || 99)
+    )[0]
     : null;
 
   // Get recipe for today's meal plan
@@ -676,6 +712,11 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
   // Get shopping list count
   const shoppingListCount = groceryItems.length;
   const shoppingListMealCount = groceryRecipes.length;
+
+  // Filter challenges for display
+  const joinedChallengesList = challenges.filter(ch => joinedChallengeIds.includes(ch.id));
+  const otherChallengesList = challenges.filter(ch => !joinedChallengeIds.includes(ch.id));
+  const topChallenges = [...joinedChallengesList, ...otherChallengesList].slice(0, 3);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
@@ -689,7 +730,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
           <View style={styles.headerButtons}>
             <TouchableOpacity
               style={styles.exploreButton}
-              onPress={() => navigation.navigate('Explore')}
+              onPress={() => navigation.navigate('Search')}
             >
               <Ionicons name="search-outline" size={24} color="#1A1A1A" />
             </TouchableOpacity>
@@ -712,7 +753,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
         </View>
       </View>
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -727,11 +768,11 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
         {/* Today Section - Show meal plan for today */}
         {todaysMealPlan && todaysRecipe && (
           <>
-            <View style={styles.todaySection}> 
+            <View style={styles.todaySection}>
               <Text style={styles.readyToCookTitle}>
                 Ready to cook {todaysMealPlan.mealType.charAt(0).toUpperCase() + todaysMealPlan.mealType.slice(1)}?
               </Text>
-              
+
               {/* Recipe Card */}
               <TouchableOpacity
                 style={styles.todayRecipeCard}
@@ -739,23 +780,23 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
               >
                 <View style={styles.todayRecipeImageContainer}>
                   {typeof todaysRecipe.image === 'string' ? (
-                    <Image 
-                      source={{ uri: todaysRecipe.image }} 
-                      style={styles.todayRecipeImage} 
-                      resizeMode="cover" 
+                    <Image
+                      source={{ uri: todaysRecipe.image }}
+                      style={styles.todayRecipeImage}
+                      resizeMode="cover"
                     />
                   ) : todaysRecipe.image ? (
-                    <Image 
-                      source={todaysRecipe.image} 
-                      style={styles.todayRecipeImage} 
-                      resizeMode="cover" 
+                    <Image
+                      source={todaysRecipe.image}
+                      style={styles.todayRecipeImage}
+                      resizeMode="cover"
                     />
                   ) : (
                     <View style={styles.todayRecipeImagePlaceholder}>
                       <Ionicons name="restaurant-outline" size={40} color="#CCCCCC" />
                     </View>
                   )}
-                  
+
                   {/* Recipe Title Overlay */}
                   <View style={styles.todayRecipeOverlay}>
                     <Text style={styles.todayRecipeTitle} numberOfLines={2}>
@@ -767,7 +808,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
                       </Text>
                     ) : null}
                   </View>
-                  
+
                   {/* Edit Button */}
                   <TouchableOpacity
                     style={styles.todayEditButton}
@@ -815,8 +856,8 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
               <Ionicons name="bulb-outline" size={20} color="#1A1A1A" />
               <Text style={styles.sectionTitle}>Try something new</Text>
             </View>
-            <ScrollView 
-              horizontal 
+            <ScrollView
+              horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.horizontalScroll}
             >
@@ -950,8 +991,8 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
                 <Ionicons name="arrow-forward" size={16} color="#1A1A1A" />
               </TouchableOpacity>
             </View>
-            <ScrollView 
-              horizontal 
+            <ScrollView
+              horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.horizontalScroll}
             >
@@ -995,128 +1036,72 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Challenges</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.viewAllButton}
               onPress={() => navigation.navigate('Challenges')}
             >
               <Ionicons name="arrow-forward" size={16} color="#1A1A1A" />
             </TouchableOpacity>
           </View>
-          <ScrollView 
-            horizontal 
+          <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.horizontalScroll}
           >
-            {(() => {
-              // Define all available challenges
-              const allChallenges = [
-                {
-                  id: '3',
-                  title: 'Italian Cuisine',
-                  description: 'Cook 5 Italian Recipes',
-                  participants: 1210,
-                  profileEmoji: '👨‍🍳',
-                  backgroundColor: '#B8E6D3',
-                  recipeCount: 5,
-                },
-                {
-                  id: '1',
-                  title: 'Spice Master',
-                  description: 'Cook 5 Recipes That Contain Storecupboard Spices',
-                  participants: 1980,
-                  profileEmoji: '👨‍🍳',
-                  backgroundColor: '#B8E6D3',
-                  recipeCount: 5,
-                },
-                {
-                  id: '2',
-                  title: 'Middle Eastern Cuisine',
-                  description: 'Cook 5 Middle Eastern recipes',
-                  participants: 754,
-                  profileEmoji: '👨',
-                  backgroundColor: '#FFE5E5',
-                  recipeCount: 5,
-                },
-                {
-                  id: '4',
-                  title: 'Indian Cuisine',
-                  description: 'Cook 5 Indian recipes',
-                  participants: 635,
-                  profileEmoji: '👨',
-                  backgroundColor: '#FFE5E5',
-                  recipeCount: 5,
-                },
-                {
-                  id: '5',
-                  title: 'Anti-Huttlestorm',
-                  description: 'Cook 6 One-Pot/ One-Tray Recipes',
-                  participants: 2338,
-                  profileEmoji: '👨‍🍳',
-                  backgroundColor: '#FFE5E5',
-                  recipeCount: 6,
-                },
-              ];
+            {topChallenges.map((challenge) => {
+              const isJoined = joinedChallengeIds.includes(challenge.id);
+              const completedRecipes = challengeProgress[challenge.id] || 0;
+              const progressPercentage = challenge.recipeCount > 0
+                ? (completedRecipes / challenge.recipeCount) * 100
+                : 0;
 
-              // Prioritize joined challenges, then show top 3
-              const joinedChallenges = allChallenges.filter(ch => joinedChallengeIds.includes(ch.id));
-              const otherChallenges = allChallenges.filter(ch => !joinedChallengeIds.includes(ch.id));
-              const topChallenges = [...joinedChallenges, ...otherChallenges].slice(0, 3);
-
-              return topChallenges.map((challenge) => {
-                const isJoined = joinedChallengeIds.includes(challenge.id);
-                const completedRecipes = challengeProgress[challenge.id] || 0;
-                const progressPercentage = challenge.recipeCount > 0 
-                  ? (completedRecipes / challenge.recipeCount) * 100 
-                  : 0;
-
-                return (
-                  <TouchableOpacity
-                    key={challenge.id}
-                    style={[styles.challengeCard, { backgroundColor: challenge.backgroundColor }]}
-                    onPress={() => navigation.navigate('ChallengeDetail', { challengeId: challenge.id })}
-                  >
-                    <View style={styles.challengeProfileContainer}>
-                      <View style={styles.challengeProfileImage}>
-                        <View style={styles.challengeProfilePlaceholder}>
-                          <Text style={styles.challengeProfileEmoji}>{challenge.profileEmoji}</Text>
-                        </View>
-                      </View>
-                      <View style={styles.challengeContent}>
-                        <View style={styles.challengeTitleRow}>
-                          <Text style={styles.challengeTitle} numberOfLines={2}>
-                            {challenge.title}
-                          </Text>
-                          <View style={styles.challengeStats}>
-                            <Ionicons name="people-outline" size={16} color="#1A1A1A" />
-                            <Text style={styles.challengeParticipants}>
-                              {challenge.participants.toLocaleString()}
-                            </Text>
-                          </View>
-                        </View>
-                        <Text style={styles.challengeDescription}>
-                          {challenge.description}
-                        </Text>
-                        {isJoined && (
-                          <View style={styles.challengeProgressContainer}>
-                            <Text style={styles.challengeProgressText}>
-                              {completedRecipes}/{challenge.recipeCount} Recipes
-                            </Text>
-                            <View style={styles.challengeProgressBarBackground}>
-                              <View
-                                style={[
-                                  styles.challengeProgressBarFill,
-                                  { width: `${progressPercentage}%` },
-                                ]}
-                              />
-                            </View>
-                          </View>
-                        )}
+              return (
+                <TouchableOpacity
+                  key={challenge.id}
+                  style={[styles.challengeCard, { backgroundColor: challenge.backgroundColor }]}
+                  onPress={() => navigation.navigate('ChallengeDetail', { challengeId: challenge.id })}
+                >
+                  <View style={styles.challengeProfileContainer}>
+                    <View style={styles.challengeProfileImage}>
+                      <View style={styles.challengeProfilePlaceholder}>
+                        <Text style={styles.challengeProfileEmoji}>{challenge.profileEmoji}</Text>
                       </View>
                     </View>
-                  </TouchableOpacity>
-                );
-              });
-            })()}
+                    <View style={styles.challengeContent}>
+                      <View style={styles.challengeTitleRow}>
+                        <Text style={styles.challengeTitle} numberOfLines={2}>
+                          {challenge.title}
+                        </Text>
+                        <View style={styles.challengeStats}>
+                          <Ionicons name="people-outline" size={16} color="#1A1A1A" />
+                          <Text style={styles.challengeParticipants}>
+                            {challenge.participants.toLocaleString()}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.challengeDescription}>
+                        {challenge.description}
+                      </Text>
+                      {isJoined && (
+                        <View style={styles.challengeProgressContainer}>
+                          <Text style={styles.challengeProgressText}>
+                            {completedRecipes}/{challenge.recipeCount} Recipes
+                          </Text>
+                          <View style={styles.challengeProgressBarBackground}>
+                            <View
+                              style={[
+                                styles.challengeProgressBarFill,
+                                { width: `${progressPercentage}%` },
+                              ]}
+                            />
+                          </View>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         </View>
 
@@ -1130,7 +1115,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
         height="25%"
       >
         <View style={styles.filterContainer}>
-          
+
           <TouchableOpacity
             style={styles.filterOption}
             onPress={() => {
@@ -1201,16 +1186,16 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
             <View style={styles.addToMenuImageContainer}>
               {selectedRecipeForMenu.image ? (
                 typeof selectedRecipeForMenu.image === 'string' ? (
-                  <Image 
-                    source={{ uri: selectedRecipeForMenu.image }} 
-                    style={styles.addToMenuImage} 
-                    resizeMode="cover" 
+                  <Image
+                    source={{ uri: selectedRecipeForMenu.image }}
+                    style={styles.addToMenuImage}
+                    resizeMode="cover"
                   />
                 ) : (
-                  <Image 
-                    source={selectedRecipeForMenu.image} 
-                    style={styles.addToMenuImage} 
-                    resizeMode="cover" 
+                  <Image
+                    source={selectedRecipeForMenu.image}
+                    style={styles.addToMenuImage}
+                    resizeMode="cover"
                   />
                 )
               ) : (
@@ -1227,36 +1212,36 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
 
             {/* THIS WEEK Section */}
             <View style={styles.thisWeekSection}>
-              <TouchableOpacity 
-                onPress={handlePreviousWeek} 
+              <TouchableOpacity
+                onPress={handlePreviousWeek}
                 style={[
                   styles.weekNavButton,
                   weekOffset === 0 && styles.weekNavButtonDisabled
                 ]}
                 disabled={weekOffset === 0}
               >
-                <Ionicons 
-                  name="chevron-back" 
-                  size={20} 
-                  color={weekOffset === 0 ? '#CCCCCC' : '#1A1A1A'} 
+                <Ionicons
+                  name="chevron-back"
+                  size={20}
+                  color={weekOffset === 0 ? '#CCCCCC' : '#1A1A1A'}
                 />
               </TouchableOpacity>
               <View style={styles.thisWeekContent}>
                 <Ionicons name="calendar-outline" size={18} color="#1A1A1A" />
                 <Text style={styles.thisWeekText}>{getWeekLabel(weekOffset)}</Text>
               </View>
-              <TouchableOpacity 
-                onPress={handleNextWeek} 
+              <TouchableOpacity
+                onPress={handleNextWeek}
                 style={[
                   styles.weekNavButton,
                   weekOffset >= 3 && styles.weekNavButtonDisabled
                 ]}
                 disabled={weekOffset >= 3}
               >
-                <Ionicons 
-                  name="chevron-forward" 
-                  size={20} 
-                  color={weekOffset >= 3 ? '#CCCCCC' : '#1A1A1A'} 
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={weekOffset >= 3 ? '#CCCCCC' : '#1A1A1A'}
                 />
               </TouchableOpacity>
             </View>
@@ -1273,7 +1258,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
                 const dayKey = date.toISOString().split('T')[0];
                 const dayName = date.toLocaleDateString('en-US', { weekday: 'short' }).substring(0, 3);
                 const isSelected = selectedDay === dayKey;
-                
+
                 return (
                   <TouchableOpacity
                     key={dayKey}
@@ -1310,9 +1295,9 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
                     onPress={() => setSelectedMealType(mealType.id)}
                     activeOpacity={0.7}
                   >
-                    <Ionicons 
-                      name={mealType.icon as any} 
-                      size={20} 
+                    <Ionicons
+                      name={mealType.icon as any}
+                      size={20}
                       color={isSelected ? getMealTypeColor(mealType.id) : '#666'}
                       style={{ marginRight: 8 }}
                     />
@@ -1361,16 +1346,16 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
                   <View style={styles.recipeOptionsImageContainer}>
                     {selectedRecipeForOptions.image ? (
                       typeof selectedRecipeForOptions.image === 'string' ? (
-                        <Image 
-                          source={{ uri: selectedRecipeForOptions.image }} 
-                          style={styles.recipeOptionsImage} 
-                          resizeMode="cover" 
+                        <Image
+                          source={{ uri: selectedRecipeForOptions.image }}
+                          style={styles.recipeOptionsImage}
+                          resizeMode="cover"
                         />
                       ) : (
-                        <Image 
-                          source={selectedRecipeForOptions.image} 
-                          style={styles.recipeOptionsImage} 
-                          resizeMode="cover" 
+                        <Image
+                          source={selectedRecipeForOptions.image}
+                          style={styles.recipeOptionsImage}
+                          resizeMode="cover"
                         />
                       )
                     ) : (
@@ -1412,144 +1397,144 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
                     <Ionicons name="chevron-forward" size={20} color="#999999" />
                   </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.recipeOptionItem}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  setShowRecipeOptionsBottomSheet(false);
-                  setSelectedRecipeForMenu(selectedRecipeForOptions);
-                  setShowAddToMenuModal(true);
-                }}
-              >
-                <Ionicons name="calendar-outline" size={24} color="#1A1A1A" />
+                  <TouchableOpacity
+                    style={styles.recipeOptionItem}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      setShowRecipeOptionsBottomSheet(false);
+                      setSelectedRecipeForMenu(selectedRecipeForOptions);
+                      setShowAddToMenuModal(true);
+                    }}
+                  >
+                    <Ionicons name="calendar-outline" size={24} color="#1A1A1A" />
                     <Text style={styles.recipeOptionText}>Add to planner</Text>
-                <Ionicons name="chevron-forward" size={20} color="#999999" />
-              </TouchableOpacity>
+                    <Ionicons name="chevron-forward" size={20} color="#999999" />
+                  </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.recipeOptionItem}
-                onPress={() => {
-                  if (selectedRecipeForOptions) {
-                    setSelectedRecipeForCollection(selectedRecipeForOptions);
-                    setShowRecipeOptionsBottomSheet(false);
-                    setShowCollectionSelection(true);
-                  }
-                }}
-              >
-                <Ionicons name="heart-outline" size={24} color="#1A1A1A" />
-                <Text style={styles.recipeOptionText}>Add to My Recipes</Text>
-                <Ionicons name="chevron-forward" size={20} color="#999999" />
-              </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.recipeOptionItem}
+                    onPress={() => {
+                      if (selectedRecipeForOptions) {
+                        setSelectedRecipeForCollection(selectedRecipeForOptions);
+                        setShowRecipeOptionsBottomSheet(false);
+                        setShowCollectionSelection(true);
+                      }
+                    }}
+                  >
+                    <Ionicons name="heart-outline" size={24} color="#1A1A1A" />
+                    <Text style={styles.recipeOptionText}>Add to My Recipes</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#999999" />
+                  </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.recipeOptionItem}
-                onPress={() => {
-                  // TODO: View Recipe Pack
-                  setShowRecipeOptionsBottomSheet(false);
-                }}
-              >
-                <Ionicons name="layers-outline" size={24} color="#1A1A1A" />
-                <Text style={styles.recipeOptionText}>View Recipe Pack</Text>
-                <Ionicons name="chevron-forward" size={20} color="#999999" />
-              </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.recipeOptionItem}
+                    onPress={() => {
+                      // TODO: View Recipe Pack
+                      setShowRecipeOptionsBottomSheet(false);
+                    }}
+                  >
+                    <Ionicons name="layers-outline" size={24} color="#1A1A1A" />
+                    <Text style={styles.recipeOptionText}>View Recipe Pack</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#999999" />
+                  </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.recipeOptionItem}
-                onPress={() => {
-                  // TODO: Your recipe notes
-                  setShowRecipeOptionsBottomSheet(false);
-                }}
-              >
-                <Ionicons name="pencil-outline" size={24} color="#1A1A1A" />
-                <Text style={styles.recipeOptionText}>Your recipe notes</Text>
-                <Ionicons name="chevron-forward" size={20} color="#999999" />
-              </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.recipeOptionItem}
+                    onPress={() => {
+                      // TODO: Your recipe notes
+                      setShowRecipeOptionsBottomSheet(false);
+                    }}
+                  >
+                    <Ionicons name="pencil-outline" size={24} color="#1A1A1A" />
+                    <Text style={styles.recipeOptionText}>Your recipe notes</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#999999" />
+                  </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.recipeOptionItem}
-                onPress={() => {
-                  // TODO: Share recipe
-                  setShowRecipeOptionsBottomSheet(false);
-                }}
-              >
-                <Ionicons name="share-outline" size={24} color="#1A1A1A" />
-                <Text style={styles.recipeOptionText}>Share recipe</Text>
-                <Ionicons name="chevron-forward" size={20} color="#999999" />
-              </TouchableOpacity>
-            </View>
-          </>
-        ) : (
-          <>
-            {/* Meal Type Selection Header with Back Button */}
-            <View style={styles.mealTypeHeader}>
-              <TouchableOpacity
-                style={styles.mealTypeBackButton}
-                onPress={() => setShowMealTypeSelection(false)}
-              >
-                <Ionicons name="chevron-back" size={24} color="#1A1A1A" />
-              </TouchableOpacity>
-              <Text style={styles.mealTypeTitle}>Select meal type</Text>
-              <View style={styles.mealTypeBackButton} />
-            </View>
+                  <TouchableOpacity
+                    style={styles.recipeOptionItem}
+                    onPress={() => {
+                      // TODO: Share recipe
+                      setShowRecipeOptionsBottomSheet(false);
+                    }}
+                  >
+                    <Ionicons name="share-outline" size={24} color="#1A1A1A" />
+                    <Text style={styles.recipeOptionText}>Share recipe</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#999999" />
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                {/* Meal Type Selection Header with Back Button */}
+                <View style={styles.mealTypeHeader}>
+                  <TouchableOpacity
+                    style={styles.mealTypeBackButton}
+                    onPress={() => setShowMealTypeSelection(false)}
+                  >
+                    <Ionicons name="chevron-back" size={24} color="#1A1A1A" />
+                  </TouchableOpacity>
+                  <Text style={styles.mealTypeTitle}>Select meal type</Text>
+                  <View style={styles.mealTypeBackButton} />
+                </View>
 
-            {/* Meal Type Options */}
-            <View style={styles.mealTypeList}>
-              {['breakfast', 'lunch', 'dinner', 'snack'].map((mealType) => (
-                <TouchableOpacity
-                  key={mealType}
-                  style={styles.mealTypeItem}
-                  onPress={() => {
-                    const today = getTodayDate();
-                    const newMealPlan: MealPlanItem = {
-                      id: `meal-${Date.now()}`,
-                      recipeId: selectedRecipeForOptions.id,
-                      recipeTitle: selectedRecipeForOptions.title,
-                      recipeImage: typeof selectedRecipeForOptions.image === 'string' 
-                        ? selectedRecipeForOptions.image 
-                        : undefined,
-                      mealType: mealType as 'breakfast' | 'lunch' | 'dinner' | 'snack',
-                      date: today,
-                      includeInGrocery: true,
-                    };
-                    
-                    addMealPlan(newMealPlan);
+                {/* Meal Type Options */}
+                <View style={styles.mealTypeList}>
+                  {['breakfast', 'lunch', 'dinner', 'snack'].map((mealType) => (
+                    <TouchableOpacity
+                      key={mealType}
+                      style={styles.mealTypeItem}
+                      onPress={() => {
+                        const today = getTodayDate();
+                        const newMealPlan: MealPlanItem = {
+                          id: `meal-${Date.now()}`,
+                          recipeId: selectedRecipeForOptions.id,
+                          recipeTitle: selectedRecipeForOptions.title,
+                          recipeImage: typeof selectedRecipeForOptions.image === 'string'
+                            ? selectedRecipeForOptions.image
+                            : undefined,
+                          mealType: mealType as 'breakfast' | 'lunch' | 'dinner' | 'snack',
+                          date: today,
+                          includeInGrocery: true,
+                        };
 
-                    // Automatically add ingredients to groceries list if includeInGrocery is true
-                    if (newMealPlan.includeInGrocery && selectedRecipeForOptions.ingredients && selectedRecipeForOptions.ingredients.length > 0) {
-                      const recipeServings = selectedRecipeForOptions.servings || 4;
-                      const targetServings = newMealPlan.servingsOverride || recipeServings;
-                      
-                      // Adjust ingredients based on servings
-                      const adjustedIngredients = selectedRecipeForOptions.ingredients.map(ing => ({
-                        ...ing,
-                        amount: String(Number(ing.amount || '1') * (targetServings / recipeServings)),
-                      }));
+                        addMealPlan(newMealPlan);
 
-                      // Create sources for each ingredient
-                      const sources: GrocerySource[] = adjustedIngredients.map((ing) => ({
-                        recipeId: selectedRecipeForOptions.id,
-                        recipeTitle: selectedRecipeForOptions.title,
-                        mealPlanEntryId: newMealPlan.id,
-                        amount: ing.amount,
-                      }));
+                        // Automatically add ingredients to groceries list if includeInGrocery is true
+                        if (newMealPlan.includeInGrocery && selectedRecipeForOptions.ingredients && selectedRecipeForOptions.ingredients.length > 0) {
+                          const recipeServings = selectedRecipeForOptions.servings || 4;
+                          const targetServings = newMealPlan.servingsOverride || recipeServings;
 
-                      addItems(adjustedIngredients, selectedRecipeForOptions.id, selectedRecipeForOptions.title, targetServings, sources);
-                      console.log('🛒 Added ingredients to groceries list:', adjustedIngredients.length);
-                    }
-                    
-                    setShowRecipeOptionsBottomSheet(false);
-                    setShowMealTypeSelection(false);
-                  }}
-                >
-                  <Text style={styles.mealTypeItemText}>
-                    {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={20} color="#999999" />
-                </TouchableOpacity>
-              ))}
-            </View>
-          </>
-        )}
+                          // Adjust ingredients based on servings
+                          const adjustedIngredients = selectedRecipeForOptions.ingredients.map(ing => ({
+                            ...ing,
+                            amount: String(Number(ing.amount || '1') * (targetServings / recipeServings)),
+                          }));
+
+                          // Create sources for each ingredient
+                          const sources: GrocerySource[] = adjustedIngredients.map((ing) => ({
+                            recipeId: selectedRecipeForOptions.id,
+                            recipeTitle: selectedRecipeForOptions.title,
+                            mealPlanEntryId: newMealPlan.id,
+                            amount: ing.amount,
+                          }));
+
+                          addItems(adjustedIngredients, selectedRecipeForOptions.id, selectedRecipeForOptions.title, targetServings, sources);
+                          console.log('🛒 Added ingredients to groceries list:', adjustedIngredients.length);
+                        }
+
+                        setShowRecipeOptionsBottomSheet(false);
+                        setShowMealTypeSelection(false);
+                      }}
+                    >
+                      <Text style={styles.mealTypeItemText}>
+                        {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
+                      </Text>
+                      <Ionicons name="chevron-forward" size={20} color="#999999" />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </>
+            )}
           </View>
         )}
       </BottomSheet>
@@ -1845,9 +1830,9 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
               {filteredInspirationRecipes.length > 0 ? (
                 <View style={styles.inspirationRecipeGrid}>
                   {filteredInspirationRecipes.map((recipe) => {
-                    const imageUrl = imageUrls[recipe.id] || 
+                    const imageUrl = imageUrls[recipe.id] ||
                       (typeof recipe.image === 'string' ? recipe.image : null);
-                    
+
                     return (
                       <TouchableOpacity
                         key={recipe.id}
@@ -1865,7 +1850,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
                               <Ionicons name="restaurant-outline" size={40} color="#CCCCCC" />
                             </View>
                           )}
-                          
+
                           {/* Plus Button */}
                           <TouchableOpacity
                             style={styles.inspirationPlusButton}
@@ -1964,12 +1949,12 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
               {useUpIngredientsRecipes.length > 0 ? (
                 <View style={styles.useUpIngredientsRecipeGrid}>
                   {useUpIngredientsRecipes.map((recipe) => {
-                    const imageUrl = imageUrls[recipe.id] || 
+                    const imageUrl = imageUrls[recipe.id] ||
                       (typeof recipe.image === 'string' ? recipe.image : null);
-                    const isVegetarian = recipe.tags?.some(tag => 
+                    const isVegetarian = recipe.tags?.some(tag =>
                       tag.toLowerCase() === 'vegetarian'
                     ) || false;
-                    
+
                     return (
                       <TouchableOpacity
                         key={recipe.id}
@@ -1987,7 +1972,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
                               <Ionicons name="restaurant-outline" size={40} color="#CCCCCC" />
                             </View>
                           )}
-                          
+
                           {/* Vegetarian Icon */}
                           {isVegetarian && (
                             <View style={styles.useUpIngredientsVegetarianIcon}>
@@ -1995,7 +1980,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
                               <Text style={styles.useUpIngredientsVegetarianText}>v</Text>
                             </View>
                           )}
-                          
+
                           {/* Plus Button */}
                           <TouchableOpacity
                             style={styles.useUpIngredientsPlusButton}
@@ -2026,108 +2011,108 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
           ) : (
             <>
 
-          {/* Ingredient Grid */}
-          <ScrollView
-            style={styles.useUpIngredientsScrollView}
-            contentContainerStyle={styles.useUpIngredientsScrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.useUpIngredientsGrid}>
-              {(() => {
-                // Get selected ingredients first (at the top)
-                const selectedItems = ALL_INGREDIENTS.filter(ing => 
-                  selectedIngredients.includes(ing.id) &&
-                  ing.label.toLowerCase().includes(ingredientSearchQuery.toLowerCase())
-                );
-                // Get unselected ingredients
-                const unselectedItems = ALL_INGREDIENTS.filter(ing => 
-                  !selectedIngredients.includes(ing.id) &&
-                  ing.label.toLowerCase().includes(ingredientSearchQuery.toLowerCase())
-                );
-                // Combine: selected first (all of them), then unselected (up to 9 total)
-                const remainingSlots = 9 - selectedItems.length;
-                const sortedIngredients = [
-                  ...selectedItems,
-                  ...unselectedItems.slice(0, Math.max(0, remainingSlots))
-                ];
-                
-                return sortedIngredients.map((ingredient) => {
-                  const isSelected = selectedIngredients.includes(ingredient.id);
-                  return (
-                    <TouchableOpacity
-                      key={ingredient.id}
-                      style={[
-                        styles.useUpIngredientTag,
-                        isSelected && styles.useUpIngredientTagSelected,
-                      ]}
-                      onPress={() => {
-                        if (isSelected) {
-                          setSelectedIngredients(prev => prev.filter(id => id !== ingredient.id));
-                        } else {
-                          setSelectedIngredients(prev => [...prev, ingredient.id]);
-                        }
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.useUpIngredientIcon}>{ingredient.icon}</Text>
-                      <Text style={[
-                        styles.useUpIngredientLabel,
-                        isSelected && styles.useUpIngredientLabelSelected,
-                      ]}>
-                        {ingredient.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                });
-              })()}
-            </View>
-          </ScrollView>
+              {/* Ingredient Grid */}
+              <ScrollView
+                style={styles.useUpIngredientsScrollView}
+                contentContainerStyle={styles.useUpIngredientsScrollContent}
+                showsVerticalScrollIndicator={false}
+              >
+                <View style={styles.useUpIngredientsGrid}>
+                  {(() => {
+                    // Get selected ingredients first (at the top)
+                    const selectedItems = ALL_INGREDIENTS.filter(ing =>
+                      selectedIngredients.includes(ing.id) &&
+                      ing.label.toLowerCase().includes(ingredientSearchQuery.toLowerCase())
+                    );
+                    // Get unselected ingredients
+                    const unselectedItems = ALL_INGREDIENTS.filter(ing =>
+                      !selectedIngredients.includes(ing.id) &&
+                      ing.label.toLowerCase().includes(ingredientSearchQuery.toLowerCase())
+                    );
+                    // Combine: selected first (all of them), then unselected (up to 9 total)
+                    const remainingSlots = 9 - selectedItems.length;
+                    const sortedIngredients = [
+                      ...selectedItems,
+                      ...unselectedItems.slice(0, Math.max(0, remainingSlots))
+                    ];
 
-          {/* Search Bar */}
-          <TouchableOpacity
-            style={styles.useUpIngredientsSearchContainer}
-            onPress={() => {
-              setShowUseUpIngredientsBottomSheet(false);
-              setIngredientSearchContext('use-up');
-              setSelectedSearchIngredients([...selectedIngredients]);
-              setShowIngredientSearchScreen(true);
-            }}
-          >
-            <Ionicons name="search" size={20} color="#999999" style={styles.useUpIngredientsSearchIcon} />
-            <Text style={styles.useUpIngredientsSearchInputPlaceholder}>Search for ingredients</Text>
-          </TouchableOpacity>
+                    return sortedIngredients.map((ingredient) => {
+                      const isSelected = selectedIngredients.includes(ingredient.id);
+                      return (
+                        <TouchableOpacity
+                          key={ingredient.id}
+                          style={[
+                            styles.useUpIngredientTag,
+                            isSelected && styles.useUpIngredientTagSelected,
+                          ]}
+                          onPress={() => {
+                            if (isSelected) {
+                              setSelectedIngredients(prev => prev.filter(id => id !== ingredient.id));
+                            } else {
+                              setSelectedIngredients(prev => [...prev, ingredient.id]);
+                            }
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.useUpIngredientIcon}>{ingredient.icon}</Text>
+                          <Text style={[
+                            styles.useUpIngredientLabel,
+                            isSelected && styles.useUpIngredientLabelSelected,
+                          ]}>
+                            {ingredient.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    });
+                  })()}
+                </View>
+              </ScrollView>
 
-          {/* Find Recipes Button */}
-          <TouchableOpacity
-            style={[
-              styles.useUpIngredientsFindButton,
-              selectedIngredients.length === 0 && styles.useUpIngredientsFindButtonDisabled,
-            ]}
-            onPress={() => {
-              if (selectedIngredients.length > 0) {
-                // Filter recipes that contain at least one of the selected ingredients
-                const filtered = allRecipes.filter(recipe => {
-                  const ingredients = recipe.ingredients || [];
-                  const ingredientText = ingredients.map(ing => 
-                    (typeof ing === 'string' ? ing : ing.name || '').toLowerCase()
-                  ).join(' ');
-                  
-                  // Check if recipe contains any of the selected ingredients
-                  return selectedIngredients.some(selectedId => {
-                    const selectedIngredient = ALL_INGREDIENTS.find(ing => ing.id === selectedId);
-                    if (!selectedIngredient) return false;
-                    return ingredientText.includes(selectedIngredient.label.toLowerCase());
-                  });
-                });
-                
-                setUseUpIngredientsRecipes(filtered);
-                setUseUpIngredientsResultsShown(true);
-              }
-            }}
-            disabled={selectedIngredients.length === 0}
-          >
-            <Text style={styles.useUpIngredientsFindButtonText}>FIND SOME RECIPES!</Text>
-          </TouchableOpacity>
+              {/* Search Bar */}
+              <TouchableOpacity
+                style={styles.useUpIngredientsSearchContainer}
+                onPress={() => {
+                  setShowUseUpIngredientsBottomSheet(false);
+                  setIngredientSearchContext('use-up');
+                  setSelectedSearchIngredients([...selectedIngredients]);
+                  setShowIngredientSearchScreen(true);
+                }}
+              >
+                <Ionicons name="search" size={20} color="#999999" style={styles.useUpIngredientsSearchIcon} />
+                <Text style={styles.useUpIngredientsSearchInputPlaceholder}>Search for ingredients</Text>
+              </TouchableOpacity>
+
+              {/* Find Recipes Button */}
+              <TouchableOpacity
+                style={[
+                  styles.useUpIngredientsFindButton,
+                  selectedIngredients.length === 0 && styles.useUpIngredientsFindButtonDisabled,
+                ]}
+                onPress={() => {
+                  if (selectedIngredients.length > 0) {
+                    // Filter recipes that contain at least one of the selected ingredients
+                    const filtered = allRecipes.filter(recipe => {
+                      const ingredients = recipe.ingredients || [];
+                      const ingredientText = ingredients.map(ing =>
+                        (typeof ing === 'string' ? ing : ing.name || '').toLowerCase()
+                      ).join(' ');
+
+                      // Check if recipe contains any of the selected ingredients
+                      return selectedIngredients.some(selectedId => {
+                        const selectedIngredient = ALL_INGREDIENTS.find(ing => ing.id === selectedId);
+                        if (!selectedIngredient) return false;
+                        return ingredientText.includes(selectedIngredient.label.toLowerCase());
+                      });
+                    });
+
+                    setUseUpIngredientsRecipes(filtered);
+                    setUseUpIngredientsResultsShown(true);
+                  }
+                }}
+                disabled={selectedIngredients.length === 0}
+              >
+                <Text style={styles.useUpIngredientsFindButtonText}>FIND SOME RECIPES!</Text>
+              </TouchableOpacity>
             </>
           )}
         </View>
@@ -2221,68 +2206,68 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
             >
               {generatedMealPlanRecipes.length > 0 ? (
                 generatedMealPlanRecipes.map((recipe) => {
-                const imageUrl = imageUrls[recipe.id] || 
-                  (typeof recipe.image === 'string' ? recipe.image : null);
-                const servings = mealPlanServings[recipe.id] || (recipe.servings || 2);
-                
-                return (
-                  <View key={recipe.id} style={styles.mealPlanRecipeCard}>
-                    <View style={styles.mealPlanRecipeImageContainer}>
-                      {imageUrl ? (
-                        <Image source={{ uri: imageUrl }} style={styles.mealPlanRecipeImage} resizeMode="cover" />
-                      ) : (
-                        <View style={styles.mealPlanRecipeImagePlaceholder}>
-                          <Ionicons name="restaurant-outline" size={40} color="#CCCCCC" />
-                        </View>
-                      )}
-                      <TouchableOpacity
-                        style={styles.mealPlanRecipePlusButton}
-                        onPress={() => {
-                          // TODO: Add recipe to planner
-                          console.log('Add recipe to planner:', recipe.id);
-                        }}
-                      >
-                        <Ionicons name="add" size={20} color="#1A1A1A" />
-                      </TouchableOpacity>
+                  const imageUrl = imageUrls[recipe.id] ||
+                    (typeof recipe.image === 'string' ? recipe.image : null);
+                  const servings = mealPlanServings[recipe.id] || (recipe.servings || 2);
+
+                  return (
+                    <View key={recipe.id} style={styles.mealPlanRecipeCard}>
+                      <View style={styles.mealPlanRecipeImageContainer}>
+                        {imageUrl ? (
+                          <Image source={{ uri: imageUrl }} style={styles.mealPlanRecipeImage} resizeMode="cover" />
+                        ) : (
+                          <View style={styles.mealPlanRecipeImagePlaceholder}>
+                            <Ionicons name="restaurant-outline" size={40} color="#CCCCCC" />
+                          </View>
+                        )}
+                        <TouchableOpacity
+                          style={styles.mealPlanRecipePlusButton}
+                          onPress={() => {
+                            // TODO: Add recipe to planner
+                            console.log('Add recipe to planner:', recipe.id);
+                          }}
+                        >
+                          <Ionicons name="add" size={20} color="#1A1A1A" />
+                        </TouchableOpacity>
+                      </View>
+                      <Text style={styles.mealPlanRecipeTitle} numberOfLines={2}>
+                        {recipe.title}
+                      </Text>
+                      <Text style={styles.mealPlanRecipeTime}>
+                        {recipe.cookTime || '35'} mins
+                      </Text>
+                      <View style={styles.mealPlanRecipeServings}>
+                        <TouchableOpacity
+                          style={styles.mealPlanRecipeServingsButton}
+                          onPress={() => {
+                            if (servings > 1) {
+                              setMealPlanServings(prev => ({ ...prev, [recipe.id]: servings - 1 }));
+                            }
+                          }}
+                        >
+                          <Ionicons name="remove" size={18} color="#1A1A1A" />
+                        </TouchableOpacity>
+                        <Text style={styles.mealPlanRecipeServingsText}>{servings} Servings</Text>
+                        <TouchableOpacity
+                          style={styles.mealPlanRecipeServingsButton}
+                          onPress={() => {
+                            setMealPlanServings(prev => ({ ...prev, [recipe.id]: servings + 1 }));
+                          }}
+                        >
+                          <Ionicons name="add" size={18} color="#1A1A1A" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.mealPlanRecipeRefreshButton}
+                          onPress={() => {
+                            // TODO: Refresh/replace this recipe
+                            console.log('Refresh recipe:', recipe.id);
+                          }}
+                        >
+                          <Ionicons name="refresh" size={18} color="#1A1A1A" />
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                    <Text style={styles.mealPlanRecipeTitle} numberOfLines={2}>
-                      {recipe.title}
-                    </Text>
-                    <Text style={styles.mealPlanRecipeTime}>
-                      {recipe.cookTime || '35'} mins
-                    </Text>
-                    <View style={styles.mealPlanRecipeServings}>
-                      <TouchableOpacity
-                        style={styles.mealPlanRecipeServingsButton}
-                        onPress={() => {
-                          if (servings > 1) {
-                            setMealPlanServings(prev => ({ ...prev, [recipe.id]: servings - 1 }));
-                          }
-                        }}
-                      >
-                        <Ionicons name="remove" size={18} color="#1A1A1A" />
-                      </TouchableOpacity>
-                      <Text style={styles.mealPlanRecipeServingsText}>{servings} Servings</Text>
-                      <TouchableOpacity
-                        style={styles.mealPlanRecipeServingsButton}
-                        onPress={() => {
-                          setMealPlanServings(prev => ({ ...prev, [recipe.id]: servings + 1 }));
-                        }}
-                      >
-                        <Ionicons name="add" size={18} color="#1A1A1A" />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.mealPlanRecipeRefreshButton}
-                        onPress={() => {
-                          // TODO: Refresh/replace this recipe
-                          console.log('Refresh recipe:', recipe.id);
-                        }}
-                      >
-                        <Ionicons name="refresh" size={18} color="#1A1A1A" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                );
+                  );
                 })
               ) : (
                 /* Empty State */
@@ -2374,14 +2359,14 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
                         { id: 'tofu', label: 'Tofu', icon: '🧈' },
                         ...ALL_INGREDIENTS.filter(ing => !['egg', 'tofu'].includes(ing.id)),
                       ];
-                      
+
                       // Get selected dislikes first (at the top)
-                      const selectedItems = dislikesList.filter(item => 
+                      const selectedItems = dislikesList.filter(item =>
                         selectedDislikes.includes(item.id) &&
                         item.label.toLowerCase().includes(dislikeSearchQuery.toLowerCase())
                       );
                       // Get unselected items
-                      const unselectedItems = dislikesList.filter(item => 
+                      const unselectedItems = dislikesList.filter(item =>
                         !selectedDislikes.includes(item.id) &&
                         item.label.toLowerCase().includes(dislikeSearchQuery.toLowerCase())
                       );
@@ -2391,7 +2376,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
                         ...selectedItems,
                         ...unselectedItems.slice(0, Math.max(0, remainingSlots))
                       ];
-                      
+
                       return sortedItems.map((item) => {
                         const isSelected = selectedDislikes.includes(item.id);
                         return (
@@ -2445,7 +2430,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
                 onPress={() => {
                   // Start generating meal plan
                   setIsGeneratingMealPlan(true);
-                  
+
                   // Simulate generation delay with animation
                   setTimeout(() => {
                     const filtered = filterRecipesByPreferences(allRecipes);
@@ -2559,9 +2544,9 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
               >
                 {selectedSearchIngredients.map((ingredientId) => {
                   const ingredient = ALL_INGREDIENTS.find(item => item.id === ingredientId);
-                  
+
                   if (!ingredient) return null;
-                  
+
                   return (
                     <View key={ingredient.id} style={styles.ingredientSearchSelectedChip}>
                       <Text style={styles.ingredientSearchSelectedChipIcon}>{ingredient.icon}</Text>

@@ -46,7 +46,7 @@ try {
 } catch (error) {
   console.warn('Superwall not available');
   usePlacement = () => ({
-    registerPlacement: async () => {},
+    registerPlacement: async () => { },
     state: { status: 'idle' },
   });
 }
@@ -83,19 +83,19 @@ const convertUserRecipeToExtended = (userRecipe: any): ExtendedRecipe => {
     .sort((a: any, b: any) => (a.order || 0) - (b.order || 0));
 
   // Convert equipment to ExtendedRecipeEquipment format (with images)
-  const equipment = userRecipe.equipment 
+  const equipment = userRecipe.equipment
     ? (userRecipe.equipment || []).map((eq: any) => {
-        // If it's already a string (legacy format), convert to object
-        if (typeof eq === 'string') {
-          return { name: eq };
-        }
-        // If it's an object, preserve id, name, and image
-        return {
-          id: eq.id,
-          name: eq.name || eq,
-          image: eq.image,
-        };
-      })
+      // If it's already a string (legacy format), convert to object
+      if (typeof eq === 'string') {
+        return { name: eq };
+      }
+      // If it's an object, preserve id, name, and image
+      return {
+        id: eq.id,
+        name: eq.name || eq,
+        image: eq.image,
+      };
+    })
     : undefined;
 
   return {
@@ -116,15 +116,15 @@ const convertUserRecipeToExtended = (userRecipe: any): ExtendedRecipe => {
     nutrition: userRecipe.nutrition,
     notes: userRecipe.notes,
     userId: userRecipe.userId,
-    createdAt: userRecipe.createdAt 
-      ? (typeof userRecipe.createdAt === 'number' 
-          ? new Date(userRecipe.createdAt).toISOString() 
-          : userRecipe.createdAt)
+    createdAt: userRecipe.createdAt
+      ? (typeof userRecipe.createdAt === 'number'
+        ? new Date(userRecipe.createdAt).toISOString()
+        : userRecipe.createdAt)
       : new Date().toISOString(),
     updatedAt: userRecipe.updatedAt
       ? (typeof userRecipe.updatedAt === 'number'
-          ? new Date(userRecipe.updatedAt).toISOString()
-          : userRecipe.updatedAt)
+        ? new Date(userRecipe.updatedAt).toISOString()
+        : userRecipe.updatedAt)
       : new Date().toISOString(),
     tags: Array.isArray(userRecipe.tags) ? userRecipe.tags.filter((tag: any) => tag && typeof tag === 'string' && tag.trim().length > 0) : [],
     category: userRecipe.cuisine || undefined,
@@ -134,10 +134,10 @@ const convertUserRecipeToExtended = (userRecipe: any): ExtendedRecipe => {
     // Preserve recipePack if it exists (only show if recipe is part of a pack)
     recipePack: userRecipe.recipePack && userRecipe.recipePack.id && userRecipe.recipePack.name
       ? {
-          id: userRecipe.recipePack.id,
-          name: userRecipe.recipePack.name,
-          description: userRecipe.recipePack.description,
-        }
+        id: userRecipe.recipePack.id,
+        name: userRecipe.recipePack.name,
+        description: userRecipe.recipePack.description,
+      }
       : undefined,
   };
 };
@@ -211,23 +211,23 @@ const RecipeDetailScreen: React.FC = () => {
   const { mealPlans, addMealPlan } = useMealPlanStore();
   const { addItems } = useGroceriesStore();
   const { collections, addCollection, loadCollections } = useCollectionsStore();
-  
+
   // Superwall subscription check
   const superwall = useSuperwall();
   const placement = usePlacement('trial-offer');
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [cookedRecipesCount, setCookedRecipesCount] = useState(0);
   const FREE_RECIPE_LIMIT = 1;
-  
+
   // Check if recipe is in meal plan
   const isInMealPlan = mealPlans.some(plan => plan.recipeId === recipeId);
-  
+
   // Recipe loading state
   const [recipe, setRecipe] = useState<ExtendedRecipe | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  
+
   // Get current user ID
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -273,7 +273,7 @@ const RecipeDetailScreen: React.FC = () => {
   useEffect(() => {
     loadCollections();
   }, [loadCollections]);
-  
+
   // Check if current user owns this recipe
   const isRecipeOwner = recipe && currentUserId && recipe.userId === currentUserId;
 
@@ -319,11 +319,11 @@ const RecipeDetailScreen: React.FC = () => {
             tagsLength: localRecipe.tags?.length,
             fullRecipe: JSON.stringify(localRecipe, null, 2),
           });
-          
+
           // If tags are missing or empty, try to fetch from Firestore ONCE to get the latest data
           const hasTags = Array.isArray(localRecipe.tags) && localRecipe.tags.length > 0;
           const hasAlreadyFetched = hasFetchedForTagsRef.current === recipeId;
-          
+
           if (!hasTags && !hasAlreadyFetched) {
             console.log('⚠️ Local recipe missing tags, fetching from Firestore...');
             hasFetchedForTagsRef.current = recipeId;
@@ -347,12 +347,12 @@ const RecipeDetailScreen: React.FC = () => {
         // 4. Fetch from Firestore
         console.log('📥 Fetching recipe from Firestore:', recipeId);
         const recipeDoc = await getDoc(doc(db, 'recipes', recipeId));
-        
+
         if (recipeDoc.exists()) {
           const userRecipe = { id: recipeDoc.id, ...recipeDoc.data() } as any;
           console.log('✅ Recipe found in Firestore:', userRecipe.title);
           console.log('📋 Recipe tags from Firestore:', userRecipe.tags);
-          
+
           // Check if user has permission to view this recipe
           const currentUser = auth.currentUser;
           if (!currentUser) {
@@ -371,15 +371,15 @@ const RecipeDetailScreen: React.FC = () => {
           console.log('📋 Recipe tags length:', extendedRecipe.tags?.length);
           console.log('📋 Recipe tags type:', typeof extendedRecipe.tags);
           console.log('📋 Recipe tags is array:', Array.isArray(extendedRecipe.tags));
-          
+
           // Update local store with tags from Firestore (source of truth)
           const { updateRecipe } = useRecipesStore.getState();
           updateRecipe(recipeId, { tags: extendedRecipe.tags || [] });
           console.log('💾 Updated local store with tags from Firestore');
-          
+
           setRecipe(extendedRecipe);
           setIsLoading(false);
-          
+
           // Set servings from recipe if available
           if (extendedRecipe.servings) {
             setServings(extendedRecipe.servings);
@@ -397,7 +397,7 @@ const RecipeDetailScreen: React.FC = () => {
       } catch (error: any) {
         console.error('❌ Error loading recipe:', error);
         setError(error.message || 'Failed to load recipe');
-        
+
         // If it's a "not found" error and the recipe exists in local store, remove it
         if (error.message?.includes('not found') || error.message?.includes('Recipe not found')) {
           const localRecipe = recipes.find((r) => r.id === recipeId);
@@ -407,7 +407,7 @@ const RecipeDetailScreen: React.FC = () => {
             removeRecipe(recipeId);
           }
         }
-        
+
         Alert.alert('Error', error.message || 'Failed to load recipe', [
           { text: 'OK', onPress: () => navigation.goBack() },
         ]);
@@ -434,7 +434,7 @@ const RecipeDetailScreen: React.FC = () => {
       if (timerIntervalRef.current) {
         clearInterval(timerIntervalRef.current);
       }
-      
+
       timerIntervalRef.current = setInterval(() => {
         setTimerSeconds((prev) => {
           if (prev === null || prev <= 1) {
@@ -652,20 +652,20 @@ const RecipeDetailScreen: React.FC = () => {
     try {
       setIsLoadingUpgrade(true);
       console.log('🎯 Attempting to present Superwall paywall for placement: trial-offer');
-      
+
       // Show Superwall paywall using registerPlacement
       await placement.registerPlacement({
         placement: 'trial-offer',
       });
-      
+
       console.log('✅ Superwall paywall presentation completed');
-      
+
       // Check if user successfully subscribed after paywall
       const subscribed = hasActiveSubscription(superwall);
-      
+
       // Close the upgrade bottom sheet
       setShowUpgradeBottomSheet(false);
-      
+
       // Only proceed with the pending action if user successfully subscribed
       if (subscribed) {
         console.log('✅ User successfully subscribed, proceeding with action');
@@ -677,7 +677,7 @@ const RecipeDetailScreen: React.FC = () => {
       } else {
         console.log('ℹ️ User did not subscribe, not proceeding with action');
       }
-      
+
       setPendingActionFromUpgrade(null);
     } catch (error) {
       console.error('❌ Error presenting Superwall paywall:', error);
@@ -730,7 +730,7 @@ const RecipeDetailScreen: React.FC = () => {
   const handleGoToMenu = () => {
     // Find meal plan entries for this recipe
     const recipeMealPlans = mealPlans.filter(plan => plan.recipeId === recipeId);
-    
+
     if (recipeMealPlans.length === 0) {
       // No meal plans found, just go to meal plan screen
       (navigation as any).navigate('Home', { screen: 'MealPlan' });
@@ -741,7 +741,7 @@ const RecipeDetailScreen: React.FC = () => {
     const earliestDate = recipeMealPlans
       .map(plan => plan.date)
       .sort()
-      [0];
+    [0];
 
     // Calculate which week offset contains this date
     const targetDate = new Date(earliestDate);
@@ -763,7 +763,7 @@ const RecipeDetailScreen: React.FC = () => {
     const weekOffset = Math.floor(diffDays / 7);
 
     // Navigate to meal plan with the calculated week offset
-    (navigation as any).navigate('Home', { 
+    (navigation as any).navigate('Home', {
       screen: 'MealPlan',
       params: { weekOffset: Math.max(0, weekOffset) } // Ensure non-negative
     });
@@ -825,15 +825,15 @@ const RecipeDetailScreen: React.FC = () => {
       addItems(adjustedIngredients, recipe.id, recipe.title, servings, sources);
       console.log('🛒 Added ingredients to groceries list:', adjustedIngredients.length);
     }
-    
+
     // Show success toast
     if (selectedDay) {
       // Format the selected date for display
       const selectedDate = weekDates.find(d => formatDateKey(d) === selectedDay);
-      const formattedDate = selectedDate 
+      const formattedDate = selectedDate
         ? formatDayFull(selectedDate)
         : selectedDay;
-      
+
       setToastMessage(`${recipe.title} added for ${formattedDate}`);
       setToastType('success');
       setToastVisible(true);
@@ -842,7 +842,7 @@ const RecipeDetailScreen: React.FC = () => {
       setToastType('success');
       setToastVisible(true);
     }
-    
+
     // Close modal
     setShowAddToMenuModal(false);
     setSelectedDay(null);
@@ -910,10 +910,10 @@ const RecipeDetailScreen: React.FC = () => {
     const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay; // Get to Monday
     const monday = new Date(today);
     monday.setDate(today.getDate() + mondayOffset + (offset * 7));
-    
+
     // Set to midnight to avoid timezone issues
     monday.setHours(0, 0, 0, 0);
-    
+
     const dates: Date[] = [];
     for (let i = 0; i < 7; i++) {
       const date = new Date(monday);
@@ -942,14 +942,14 @@ const RecipeDetailScreen: React.FC = () => {
     const dates = getWeekDates(offset);
     const startDate = dates[0];
     const endDate = dates[6];
-    
+
     const formatDate = (date: Date) => {
       const day = date.getDate();
       const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
       const month = date.toLocaleDateString('en-US', { month: 'short' });
       return `${dayName} ${day}${getDaySuffix(day)} ${month}`;
     };
-    
+
     return `${formatDate(startDate)} - ${formatDate(endDate)}`;
   };
 
@@ -1021,7 +1021,7 @@ const RecipeDetailScreen: React.FC = () => {
       };
       if (iconMap[iconId]) return iconMap[iconId];
     }
-    
+
     // Fallback to name-based detection
     const name = ingredientName.toLowerCase();
     if (name.includes('rice')) return '🌾';
@@ -1038,7 +1038,7 @@ const RecipeDetailScreen: React.FC = () => {
   const getEquipmentIcon = (equipment: string | { name: string; image?: string }): keyof typeof Ionicons.glyphMap => {
     const equipmentName = typeof equipment === 'string' ? equipment : equipment.name;
     const name = equipmentName.toLowerCase();
-    
+
     // Pan and pot related
     if (name.includes('pan') || name.includes('frying pan') || name.includes('skillet')) {
       return 'restaurant-outline';
@@ -1049,7 +1049,7 @@ const RecipeDetailScreen: React.FC = () => {
     if (name.includes('wok')) {
       return 'restaurant-outline';
     }
-    
+
     // Knife related
     if (name.includes('knife') || name.includes('chef')) {
       return 'cut-outline';
@@ -1057,12 +1057,12 @@ const RecipeDetailScreen: React.FC = () => {
     if (name.includes('peeler')) {
       return 'cut-outline';
     }
-    
+
     // Sieve and strainer
     if (name.includes('sieve') || name.includes('strainer') || name.includes('colander')) {
       return 'water-outline';
     }
-    
+
     // Baking related
     if (name.includes('baking') || name.includes('parchment') || name.includes('paper')) {
       return 'document-text-outline';
@@ -1073,7 +1073,7 @@ const RecipeDetailScreen: React.FC = () => {
     if (name.includes('oven')) {
       return 'flame-outline';
     }
-    
+
     // Mixing and preparation
     if (name.includes('bowl') || name.includes('mixing')) {
       return 'ellipse-outline';
@@ -1087,12 +1087,12 @@ const RecipeDetailScreen: React.FC = () => {
     if (name.includes('tongs')) {
       return 'hand-left-outline';
     }
-    
+
     // Measuring
     if (name.includes('measuring') || name.includes('cup') || name.includes('scale')) {
       return 'scale-outline';
     }
-    
+
     // Grater and other tools
     if (name.includes('grater') || name.includes('zester')) {
       return 'grid-outline';
@@ -1100,7 +1100,7 @@ const RecipeDetailScreen: React.FC = () => {
     if (name.includes('blender') || name.includes('food processor')) {
       return 'pulse-outline';
     }
-    
+
     // Default
     return 'construct-outline';
   };
@@ -1116,7 +1116,7 @@ const RecipeDetailScreen: React.FC = () => {
       {/* Sticky Header */}
       {showStickyHeader && (
         <View style={[styles.stickyHeader, { paddingTop: Math.max(insets.top, 8) }]}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.stickyBackButton}
             onPress={() => navigation.goBack()}
           >
@@ -1127,7 +1127,7 @@ const RecipeDetailScreen: React.FC = () => {
           </Text>
           <View style={styles.stickyHeaderActions}>
             {isRecipeOwner && (
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.stickyEditButton}
                 onPress={() => {
                   navigation.navigate('WriteRecipe', { recipeId: recipe.id });
@@ -1136,7 +1136,7 @@ const RecipeDetailScreen: React.FC = () => {
                 <Ionicons name="pencil" size={20} color="#1A1A1A" />
               </TouchableOpacity>
             )}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.stickyPlusButton}
               onPress={() => {
                 setShowRecipeOptionsBottomSheet(true);
@@ -1147,7 +1147,7 @@ const RecipeDetailScreen: React.FC = () => {
           </View>
         </View>
       )}
-      
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -1168,9 +1168,9 @@ const RecipeDetailScreen: React.FC = () => {
               <Ionicons name="image-outline" size={60} color="#E0E0E0" />
             </View>
           )}
-          
+
           {/* Back Button - Overlayed on top-left */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.imageBackButton, { top: Math.max(insets.top, 8) + 12 }]}
             onPress={() => navigation.goBack()}
           >
@@ -1179,7 +1179,7 @@ const RecipeDetailScreen: React.FC = () => {
 
           {/* Edit Button - Overlayed on top-right (only if user owns recipe) */}
           {isRecipeOwner && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.imageEditButton, { top: Math.max(insets.top, 8) + 12 }]}
               onPress={() => {
                 navigation.navigate('WriteRecipe', { recipeId: recipe.id });
@@ -1190,7 +1190,7 @@ const RecipeDetailScreen: React.FC = () => {
           )}
 
           {/* Plus Button - Overlayed on bottom-right */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.imagePlusButton}
             onPress={() => {
               setShowRecipeOptionsBottomSheet(true);
@@ -1218,412 +1218,412 @@ const RecipeDetailScreen: React.FC = () => {
           )}
 
           {/* Chef Tips Section */}
-        {recipe.chefTips && recipe.chefTips.length > 0 && (
-          <View style={styles.chefTipsSection}>
-            <TouchableOpacity
-              style={styles.chefTipsHeader}
-              onPress={() => setChefTipsExpanded(!chefTipsExpanded)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.chefTipsHeaderLeft}>
-                <MaterialCommunityIcons name="chef-hat" size={20} color="#1A1A1A" />
-                <Text style={styles.chefTipsTitle}>Chef Tips</Text>
-              </View>
-              <Ionicons
-                name={chefTipsExpanded ? 'chevron-up' : 'chevron-down'}
-                size={20}
-                color="#1A1A1A"
-              />
-            </TouchableOpacity>
-            {chefTipsExpanded && (
-              <View style={styles.chefTipsContent}>
-                {recipe.chefTips.map((tip, index) => (
-                  <View key={index} style={styles.chefTipItem}>
-                    <Text style={styles.chefTipBullet}>•</Text>
-                    <View style={styles.chefTipTextContainer}>
-                      <Text style={styles.chefTipLabel}>
-                        {tip.type === 'tip' ? 'Tip' : 'Make ahead'}
-                      </Text>
-                      <Text style={styles.chefTipText}>{tip.text}</Text>
-                    </View>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* Stats Grid - Rate, Time, Servings */}
-        <View style={styles.statsGrid}>
-          {/* First Row: Rate and Time */}
-          <View style={styles.statsRowContainer}>
-            {/* Rating */}
-            <TouchableOpacity
-              style={styles.statItemNoBorder}
-              onPress={() => navigation.navigate('RateAndReview', { recipeId })}
-            >
-              <Ionicons name="star-outline" size={18} color="#1A1A1A" />
-              <Text style={styles.statText}>Rate</Text>
-            </TouchableOpacity>
-
-            {/* Divider */}
-            <View style={styles.statDivider} />
-
-            {/* Time */}
-            {totalTime > 0 ? (
-              <View style={styles.statItemNoBorder}>
-                <Ionicons name="time-outline" size={18} color="#1A1A1A" />
-                <Text style={styles.statText}>{totalTime} mins</Text>
-              </View>
-            ) : (
-              <View style={styles.statItemNoBorder} />
-            )}
-          </View>
-
-          {/* Horizontal Divider */}
-          <View style={styles.rowDivider} />
-
-          {/* Second Row: Servings */}
-          <View style={styles.servingsRow}>
-            <TouchableOpacity
-              style={styles.servingsButtonSmall}
-              onPress={decreaseServings}
-              disabled={servings <= 1}
-            >
-              <Ionicons
-                name="remove"
-                size={20}
-                color={servings <= 1 ? '#CCCCCC' : '#1A1A1A'}
-              />
-            </TouchableOpacity>
-            <Text style={styles.servingsTextSmall}>{servings} Servings</Text>
-            <TouchableOpacity style={styles.servingsButtonSmall} onPress={increaseServings}>
-              <Ionicons name="add" size={20} color="#1A1A1A" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Tabs */}
-        <View style={styles.tabsContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'ingredients' && styles.tabActive]}
-            onPress={() => setActiveTab('ingredients')}
-          >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === 'ingredients' && styles.tabTextActive,
-              ]}
-              numberOfLines={1}
-            >
-              Ingredients
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'equipment' && styles.tabActive]}
-            onPress={() => setActiveTab('equipment')}
-          >
-            <Text
-              style={[styles.tabText, activeTab === 'equipment' && styles.tabTextActive]}
-              numberOfLines={1}
-            >
-              Equipment
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'info' && styles.tabActive]}
-            onPress={() => setActiveTab('info')}
-          >
-            <Text
-              style={[styles.tabText, activeTab === 'info' && styles.tabTextActive]}
-              numberOfLines={1}
-            >
-              Info
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Separator below tabs */}
-        <View style={styles.sectionBottomBorder} />
-
-        {/* Content based on active tab */}
-        {activeTab === 'ingredients' && (
-          <View style={styles.ingredientsList}>
-            {recipe.ingredients && recipe.ingredients.length > 0 ? (
-              <>
-                {(ingredientsExpanded
-                  ? recipe.ingredients
-                  : recipe.ingredients.slice(0, 5)
-                ).map((ingredient, index, array) => (
-                  <React.Fragment key={ingredient.id}>
-                    <View style={[styles.ingredientItem, index === 0 && styles.ingredientItemFirst]}>
-                      <TouchableOpacity
-                        onPress={() => {
-                          // Use ingredient name as identifier for now
-                          // TODO: Replace with actual ingredient image URL when available
-                          setSelectedIngredientImage(ingredient.name);
-                        }}
-                      >
-                        <Text style={styles.ingredientIcon}>
-                          {getIngredientIcon(ingredient.name, ingredient.icon)}
+          {recipe.chefTips && recipe.chefTips.length > 0 && (
+            <View style={styles.chefTipsSection}>
+              <TouchableOpacity
+                style={styles.chefTipsHeader}
+                onPress={() => setChefTipsExpanded(!chefTipsExpanded)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.chefTipsHeaderLeft}>
+                  <MaterialCommunityIcons name="chef-hat" size={20} color="#1A1A1A" />
+                  <Text style={styles.chefTipsTitle}>Chef Tips</Text>
+                </View>
+                <Ionicons
+                  name={chefTipsExpanded ? 'chevron-up' : 'chevron-down'}
+                  size={20}
+                  color="#1A1A1A"
+                />
+              </TouchableOpacity>
+              {chefTipsExpanded && (
+                <View style={styles.chefTipsContent}>
+                  {recipe.chefTips.map((tip, index) => (
+                    <View key={index} style={styles.chefTipItem}>
+                      <Text style={styles.chefTipBullet}>•</Text>
+                      <View style={styles.chefTipTextContainer}>
+                        <Text style={styles.chefTipLabel}>
+                          {tip.type === 'tip' ? 'Tip' : 'Make ahead'}
                         </Text>
-                      </TouchableOpacity>
-                      <Text style={styles.ingredientText}>
-                        {ingredient.name} {ingredient.amount}
-                        {ingredient.unit ? ` ${ingredient.unit}` : ''}
-                      </Text>
-                    </View>
-                    {index < array.length - 1 && (
-                      <View style={styles.ingredientSeparator}>
-                        <View style={styles.separatorLine} />
+                        <Text style={styles.chefTipText}>{tip.text}</Text>
                       </View>
-                    )}
-                  </React.Fragment>
-                ))}
-                {recipe.ingredients.length > 5 && (
-                  <View style={styles.expandButtonContainer}>
-                    <View style={styles.ingredientsDivider} />
-                    <View style={styles.expandButtonWrapper}>
-                      <TouchableOpacity
-                        style={styles.expandButton}
-                        onPress={() => setIngredientsExpanded(!ingredientsExpanded)}
-                      >
-                        <View style={styles.chevronContainer}>
-                          <Ionicons
-                            name={ingredientsExpanded ? 'chevron-up' : 'chevron-down'}
-                            size={16}
-                            color="#1A1A1A"
-                          />
-                          <Ionicons
-                            name={ingredientsExpanded ? 'chevron-up' : 'chevron-down'}
-                            size={16}
-                            color="#1A1A1A"
-                            style={styles.secondChevron}
-                          />
-                        </View>
-                      </TouchableOpacity>
                     </View>
-                  </View>
-                )}
-              </>
-            ) : (
-              <Text style={styles.emptyText}>No ingredients listed</Text>
-            )}
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* Stats Grid - Rate, Time, Servings */}
+          <View style={styles.statsGrid}>
+            {/* First Row: Rate and Time */}
+            <View style={styles.statsRowContainer}>
+              {/* Rating */}
+              <TouchableOpacity
+                style={styles.statItemNoBorder}
+                onPress={() => navigation.navigate('RateAndReview', { recipeId })}
+              >
+                <Ionicons name="star-outline" size={18} color="#1A1A1A" />
+                <Text style={styles.statText}>Rate</Text>
+              </TouchableOpacity>
+
+              {/* Divider */}
+              <View style={styles.statDivider} />
+
+              {/* Time */}
+              {totalTime > 0 ? (
+                <View style={styles.statItemNoBorder}>
+                  <Ionicons name="time-outline" size={18} color="#1A1A1A" />
+                  <Text style={styles.statText}>{totalTime} mins</Text>
+                </View>
+              ) : (
+                <View style={styles.statItemNoBorder} />
+              )}
+            </View>
+
+            {/* Horizontal Divider */}
+            <View style={styles.rowDivider} />
+
+            {/* Second Row: Servings */}
+            <View style={styles.servingsRow}>
+              <TouchableOpacity
+                style={styles.servingsButtonSmall}
+                onPress={decreaseServings}
+                disabled={servings <= 1}
+              >
+                <Ionicons
+                  name="remove"
+                  size={20}
+                  color={servings <= 1 ? '#CCCCCC' : '#1A1A1A'}
+                />
+              </TouchableOpacity>
+              <Text style={styles.servingsTextSmall}>{servings} Servings</Text>
+              <TouchableOpacity style={styles.servingsButtonSmall} onPress={increaseServings}>
+                <Ionicons name="add" size={20} color="#1A1A1A" />
+              </TouchableOpacity>
+            </View>
           </View>
-        )}
-        
-        {activeTab === 'equipment' && (
-          <View style={styles.equipmentList}>
-            {recipe.equipment && recipe.equipment.length > 0 ? (
-              <>
-                {(equipmentExpanded
-                  ? recipe.equipment
-                  : recipe.equipment.slice(0, 5)
-                ).map((item, index, array) => {
-                  const equipmentName = typeof item === 'string' ? item : item.name;
-                  const equipmentImage = typeof item === 'object' ? item.image : undefined;
-                  
-                  return (
-                    <React.Fragment key={index}>
-                      <View style={[styles.equipmentItem, index === 0 && styles.equipmentItemFirst]}>
-                        {equipmentImage ? (
-                          <Image source={{ uri: equipmentImage }} style={styles.equipmentImage} />
-                        ) : (
-                          <Ionicons name={getEquipmentIcon(item)} size={20} color="#1A1A1A" />
-                        )}
-                        <Text style={styles.equipmentText}>{equipmentName}</Text>
+
+          {/* Tabs */}
+          <View style={styles.tabsContainer}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'ingredients' && styles.tabActive]}
+              onPress={() => setActiveTab('ingredients')}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === 'ingredients' && styles.tabTextActive,
+                ]}
+                numberOfLines={1}
+              >
+                Ingredients
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'equipment' && styles.tabActive]}
+              onPress={() => setActiveTab('equipment')}
+            >
+              <Text
+                style={[styles.tabText, activeTab === 'equipment' && styles.tabTextActive]}
+                numberOfLines={1}
+              >
+                Equipment
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'info' && styles.tabActive]}
+              onPress={() => setActiveTab('info')}
+            >
+              <Text
+                style={[styles.tabText, activeTab === 'info' && styles.tabTextActive]}
+                numberOfLines={1}
+              >
+                Info
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Separator below tabs */}
+          <View style={styles.sectionBottomBorder} />
+
+          {/* Content based on active tab */}
+          {activeTab === 'ingredients' && (
+            <View style={styles.ingredientsList}>
+              {recipe.ingredients && recipe.ingredients.length > 0 ? (
+                <>
+                  {(ingredientsExpanded
+                    ? recipe.ingredients
+                    : recipe.ingredients.slice(0, 5)
+                  ).map((ingredient, index, array) => (
+                    <React.Fragment key={ingredient.id}>
+                      <View style={[styles.ingredientItem, index === 0 && styles.ingredientItemFirst]}>
+                        <TouchableOpacity
+                          onPress={() => {
+                            // Use ingredient name as identifier for now
+                            // TODO: Replace with actual ingredient image URL when available
+                            setSelectedIngredientImage(ingredient.name);
+                          }}
+                        >
+                          <Text style={styles.ingredientIcon}>
+                            {getIngredientIcon(ingredient.name, ingredient.icon)}
+                          </Text>
+                        </TouchableOpacity>
+                        <Text style={styles.ingredientText}>
+                          {ingredient.name} {ingredient.amount}
+                          {ingredient.unit ? ` ${ingredient.unit}` : ''}
+                        </Text>
                       </View>
                       {index < array.length - 1 && (
-                        <View style={styles.equipmentSeparator}>
+                        <View style={styles.ingredientSeparator}>
                           <View style={styles.separatorLine} />
                         </View>
                       )}
                     </React.Fragment>
-                  );
-                })}
-                {recipe.equipment.length > 5 && (
-                  <View style={styles.expandButtonContainer}>
-                    <View style={styles.ingredientsDivider} />
-                    <View style={styles.expandButtonWrapper}>
-                      <TouchableOpacity
-                        style={styles.expandButton}
-                        onPress={() => setEquipmentExpanded(!equipmentExpanded)}
-                      >
-                        <View style={styles.chevronContainer}>
-                          <Ionicons
-                            name={equipmentExpanded ? 'chevron-up' : 'chevron-down'}
-                            size={16}
-                            color="#1A1A1A"
-                          />
-                          <Ionicons
-                            name={equipmentExpanded ? 'chevron-up' : 'chevron-down'}
-                            size={16}
-                            color="#1A1A1A"
-                            style={styles.secondChevron}
-                          />
-                        </View>
-                      </TouchableOpacity>
+                  ))}
+                  {recipe.ingredients.length > 5 && (
+                    <View style={styles.expandButtonContainer}>
+                      <View style={styles.ingredientsDivider} />
+                      <View style={styles.expandButtonWrapper}>
+                        <TouchableOpacity
+                          style={styles.expandButton}
+                          onPress={() => setIngredientsExpanded(!ingredientsExpanded)}
+                        >
+                          <View style={styles.chevronContainer}>
+                            <Ionicons
+                              name={ingredientsExpanded ? 'chevron-up' : 'chevron-down'}
+                              size={16}
+                              color="#1A1A1A"
+                            />
+                            <Ionicons
+                              name={ingredientsExpanded ? 'chevron-up' : 'chevron-down'}
+                              size={16}
+                              color="#1A1A1A"
+                              style={styles.secondChevron}
+                            />
+                          </View>
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                  </View>
-                )}
-              </>
-            ) : (
-              <Text style={styles.emptyText}>No equipment listed</Text>
-            )}
-          </View>
-        )}
-
-        {activeTab === 'info' && (
-          <View style={styles.infoContent}>
-            {/* Recipe Description */}
-            {recipe.description && (
-              <View style={[styles.infoSection, styles.infoSectionFirst]}>
-                <Text style={styles.infoDescription}>{recipe.description}</Text>
-              </View>
-            )}
-
-            {/* Recipe Notes */}
-            {recipe.notes && (
-              <View style={[styles.infoSection, !recipe.description && styles.infoSectionFirst]}>
-                <Text style={styles.infoSectionTitle}>Notes</Text>
-                <Text style={styles.infoNotesText}>{recipe.notes}</Text>
-              </View>
-            )}
-
-            {/* Nutrition Section */}
-            <View style={[styles.infoSection, styles.nutritionSection, !recipe.description && !recipe.notes && styles.infoSectionFirst]}>
-              {nutritionCalculated && recipe.nutrition ? (
-                <>
-                  <View style={styles.nutritionHeader}>
-                    <Text style={styles.infoSectionTitle}>Nutrition</Text>
-                  </View>
-                  <View style={styles.nutritionGrid}>
-                    <View style={styles.nutritionCard}>
-                      <Text style={styles.nutritionLabel}>kcal</Text>
-                      <Text style={styles.nutritionValue}>{recipe.nutrition.calories}</Text>
-                    </View>
-                    <View style={styles.nutritionCard}>
-                      <Text style={styles.nutritionLabel}>carbs</Text>
-                      <Text style={styles.nutritionValue}>{recipe.nutrition.carbs}g</Text>
-                    </View>
-                    <View style={styles.nutritionCard}>
-                      <Text style={styles.nutritionLabel}>fat</Text>
-                      <Text style={styles.nutritionValue}>{recipe.nutrition.fats}g</Text>
-                    </View>
-                    <View style={styles.nutritionCard}>
-                      <Text style={styles.nutritionLabel}>protein</Text>
-                      <Text style={styles.nutritionValue}>{recipe.nutrition.protein}g</Text>
-                    </View>
-                    <View style={styles.nutritionCard}>
-                      <Text style={styles.nutritionLabel}>salt</Text>
-                      <Text style={styles.nutritionValue}>
-                        {(recipe.nutrition as any).salt !== undefined ? `${(recipe.nutrition as any).salt}g` : '-'}
-                      </Text>
-                    </View>
-                    <View style={styles.nutritionCard}>
-                      <Text style={styles.nutritionLabel}>sugar</Text>
-                      <Text style={styles.nutritionValue}>
-                        {(recipe.nutrition as any).sugar !== undefined ? `${(recipe.nutrition as any).sugar}g` : '-'}
-                      </Text>
-                    </View>
-                    <View style={styles.nutritionCard}>
-                      <Text style={styles.nutritionLabel}>fibre</Text>
-                      <Text style={styles.nutritionValue}>
-                        {(recipe.nutrition as any).fibre !== undefined ? `${(recipe.nutrition as any).fibre}g` : '-'}
-                      </Text>
-                    </View>
-                    <View style={styles.nutritionCard}>
-                      <Text style={styles.nutritionLabel}>sat fat</Text>
-                      <Text style={styles.nutritionValue}>
-                        {(recipe.nutrition as any).satFat !== undefined ? `${(recipe.nutrition as any).satFat}g` : '-'}
-                      </Text>
-                    </View>
-                  </View>
+                  )}
                 </>
               ) : (
-                <View style={styles.nutritionRow}>
-                  <Text style={styles.infoSectionTitle}>Nutrition</Text>
-                  <TouchableOpacity 
-                    style={styles.calculateButton}
-                    onPress={() => {
-                      // TODO: Implement nutrition calculation
-                      // For now, if recipe already has nutrition, show it
-                      if (recipe.nutrition) {
-                        setNutritionCalculated(true);
-                      } else {
-                        Alert.alert('Calculate Nutrition', 'Nutrition calculation will be implemented soon.');
-                      }
-                    }}
-                  >
-                    <Text style={styles.calculateButtonText}>Calculate</Text>
-                  </TouchableOpacity>
+                <Text style={styles.emptyText}>No ingredients listed</Text>
+              )}
+            </View>
+          )}
+
+          {activeTab === 'equipment' && (
+            <View style={styles.equipmentList}>
+              {recipe.equipment && recipe.equipment.length > 0 ? (
+                <>
+                  {(equipmentExpanded
+                    ? recipe.equipment
+                    : recipe.equipment.slice(0, 5)
+                  ).map((item, index, array) => {
+                    const equipmentName = typeof item === 'string' ? item : item.name;
+                    const equipmentImage = typeof item === 'object' ? item.image : undefined;
+
+                    return (
+                      <React.Fragment key={index}>
+                        <View style={[styles.equipmentItem, index === 0 && styles.equipmentItemFirst]}>
+                          {equipmentImage ? (
+                            <Image source={{ uri: equipmentImage }} style={styles.equipmentImage} />
+                          ) : (
+                            <Ionicons name={getEquipmentIcon(item)} size={20} color="#1A1A1A" />
+                          )}
+                          <Text style={styles.equipmentText}>{equipmentName}</Text>
+                        </View>
+                        {index < array.length - 1 && (
+                          <View style={styles.equipmentSeparator}>
+                            <View style={styles.separatorLine} />
+                          </View>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                  {recipe.equipment.length > 5 && (
+                    <View style={styles.expandButtonContainer}>
+                      <View style={styles.ingredientsDivider} />
+                      <View style={styles.expandButtonWrapper}>
+                        <TouchableOpacity
+                          style={styles.expandButton}
+                          onPress={() => setEquipmentExpanded(!equipmentExpanded)}
+                        >
+                          <View style={styles.chevronContainer}>
+                            <Ionicons
+                              name={equipmentExpanded ? 'chevron-up' : 'chevron-down'}
+                              size={16}
+                              color="#1A1A1A"
+                            />
+                            <Ionicons
+                              name={equipmentExpanded ? 'chevron-up' : 'chevron-down'}
+                              size={16}
+                              color="#1A1A1A"
+                              style={styles.secondChevron}
+                            />
+                          </View>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </>
+              ) : (
+                <Text style={styles.emptyText}>No equipment listed</Text>
+              )}
+            </View>
+          )}
+
+          {activeTab === 'info' && (
+            <View style={styles.infoContent}>
+              {/* Recipe Description */}
+              {recipe.description && (
+                <View style={[styles.infoSection, styles.infoSectionFirst]}>
+                  <Text style={styles.infoDescription}>{recipe.description}</Text>
+                </View>
+              )}
+
+              {/* Recipe Notes */}
+              {recipe.notes && (
+                <View style={[styles.infoSection, !recipe.description && styles.infoSectionFirst]}>
+                  <Text style={styles.infoSectionTitle}>Notes</Text>
+                  <Text style={styles.infoNotesText}>{recipe.notes}</Text>
+                </View>
+              )}
+
+              {/* Nutrition Section */}
+              <View style={[styles.infoSection, styles.nutritionSection, !recipe.description && !recipe.notes && styles.infoSectionFirst]}>
+                {nutritionCalculated && recipe.nutrition ? (
+                  <>
+                    <View style={styles.nutritionHeader}>
+                      <Text style={styles.infoSectionTitle}>Nutrition</Text>
+                    </View>
+                    <View style={styles.nutritionGrid}>
+                      <View style={styles.nutritionCard}>
+                        <Text style={styles.nutritionLabel}>kcal</Text>
+                        <Text style={styles.nutritionValue}>{recipe.nutrition.calories}</Text>
+                      </View>
+                      <View style={styles.nutritionCard}>
+                        <Text style={styles.nutritionLabel}>carbs</Text>
+                        <Text style={styles.nutritionValue}>{recipe.nutrition.carbs}g</Text>
+                      </View>
+                      <View style={styles.nutritionCard}>
+                        <Text style={styles.nutritionLabel}>fat</Text>
+                        <Text style={styles.nutritionValue}>{recipe.nutrition.fats}g</Text>
+                      </View>
+                      <View style={styles.nutritionCard}>
+                        <Text style={styles.nutritionLabel}>protein</Text>
+                        <Text style={styles.nutritionValue}>{recipe.nutrition.protein}g</Text>
+                      </View>
+                      <View style={styles.nutritionCard}>
+                        <Text style={styles.nutritionLabel}>salt</Text>
+                        <Text style={styles.nutritionValue}>
+                          {(recipe.nutrition as any).salt !== undefined ? `${(recipe.nutrition as any).salt}g` : '-'}
+                        </Text>
+                      </View>
+                      <View style={styles.nutritionCard}>
+                        <Text style={styles.nutritionLabel}>sugar</Text>
+                        <Text style={styles.nutritionValue}>
+                          {(recipe.nutrition as any).sugar !== undefined ? `${(recipe.nutrition as any).sugar}g` : '-'}
+                        </Text>
+                      </View>
+                      <View style={styles.nutritionCard}>
+                        <Text style={styles.nutritionLabel}>fibre</Text>
+                        <Text style={styles.nutritionValue}>
+                          {(recipe.nutrition as any).fibre !== undefined ? `${(recipe.nutrition as any).fibre}g` : '-'}
+                        </Text>
+                      </View>
+                      <View style={styles.nutritionCard}>
+                        <Text style={styles.nutritionLabel}>sat fat</Text>
+                        <Text style={styles.nutritionValue}>
+                          {(recipe.nutrition as any).satFat !== undefined ? `${(recipe.nutrition as any).satFat}g` : '-'}
+                        </Text>
+                      </View>
+                    </View>
+                  </>
+                ) : (
+                  <View style={styles.nutritionRow}>
+                    <Text style={styles.infoSectionTitle}>Nutrition</Text>
+                    <TouchableOpacity
+                      style={styles.calculateButton}
+                      onPress={() => {
+                        // TODO: Implement nutrition calculation
+                        // For now, if recipe already has nutrition, show it
+                        if (recipe.nutrition) {
+                          setNutritionCalculated(true);
+                        } else {
+                          Alert.alert('Calculate Nutrition', 'Nutrition calculation will be implemented soon.');
+                        }
+                      }}
+                    >
+                      <Text style={styles.calculateButtonText}>Calculate</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+
+              {/* Recipe Pack Section - Only show if recipe is part of a pack */}
+              {recipe.recipePack && recipe.recipePack.id && recipe.recipePack.name && (
+                <View style={[styles.infoSection, !recipe.description && !recipe.notes && !recipe.nutrition && styles.infoSectionFirst]}>
+                  <View style={styles.recipePackHeader}>
+                    <Text style={styles.recipePackTitle}>
+                      This recipe is part of a Recipe Pack:
+                    </Text>
+                    <TouchableOpacity onPress={() => setShowRecipePackInfo(true)}>
+                      <Ionicons name="information-circle-outline" size={18} color="#1A1A1A" />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.recipePackCard}>
+                    <View style={styles.recipePackCardHeader}>
+                      <Text style={styles.recipePackName}>{recipe.recipePack.name}</Text>
+                      <TouchableOpacity onPress={handleViewPack}>
+                        <Text style={styles.viewPackLink}>view pack &gt;</Text>
+                      </TouchableOpacity>
+                    </View>
+                    {recipe.recipePack.description && (
+                      <Text style={styles.recipePackDescription}>
+                        {recipe.recipePack.description}
+                      </Text>
+                    )}
+                  </View>
                 </View>
               )}
             </View>
-
-            {/* Recipe Pack Section - Only show if recipe is part of a pack */}
-            {recipe.recipePack && recipe.recipePack.id && recipe.recipePack.name && (
-              <View style={[styles.infoSection, !recipe.description && !recipe.notes && !recipe.nutrition && styles.infoSectionFirst]}>
-                <View style={styles.recipePackHeader}>
-                  <Text style={styles.recipePackTitle}>
-                    This recipe is part of a Recipe Pack:
-                  </Text>
-                  <TouchableOpacity onPress={() => setShowRecipePackInfo(true)}>
-                    <Ionicons name="information-circle-outline" size={18} color="#1A1A1A" />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.recipePackCard}>
-                  <View style={styles.recipePackCardHeader}>
-                    <Text style={styles.recipePackName}>{recipe.recipePack.name}</Text>
-                    <TouchableOpacity onPress={handleViewPack}>
-                      <Text style={styles.viewPackLink}>view pack &gt;</Text>
-                    </TouchableOpacity>
-                  </View>
-                  {recipe.recipePack.description && (
-                    <Text style={styles.recipePackDescription}>
-                      {recipe.recipePack.description}
-                    </Text>
-                  )}
-                </View>
-              </View>
-            )}
-          </View>
-        )}
+          )}
 
 
-        {/* You may also like section */}
-        {recipes.length > 1 && (
-          <View style={styles.alsoLikeSection}>
-            <Text style={styles.alsoLikeTitle}>You may also like...</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {recipes.slice(0, 3).map((r) => (
-                <TouchableOpacity
-                  key={r.id}
-                  style={styles.alsoLikeCard}
-                  onPress={() => navigation.navigate('RecipeDetail', { recipeId: r.id })}
-                >
-                  {r.image && (
-                    <View style={styles.alsoLikeImageContainer}>
-                      {typeof r.image === 'string' ? (
-                        <Image source={{ uri: r.image }} style={styles.alsoLikeImage} />
-                      ) : (
-                        <Image source={r.image} style={styles.alsoLikeImage} />
-                      )}
+          {/* You may also like section */}
+          {recipes.length > 1 && (
+            <View style={styles.alsoLikeSection}>
+              <Text style={styles.alsoLikeTitle}>You may also like...</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {recipes.slice(0, 3).map((r) => (
+                  <TouchableOpacity
+                    key={r.id}
+                    style={styles.alsoLikeCard}
+                    onPress={() => navigation.navigate('RecipeDetail', { recipeId: r.id })}
+                  >
+                    {r.image && (
+                      <View style={styles.alsoLikeImageContainer}>
+                        {typeof r.image === 'string' ? (
+                          <Image source={{ uri: r.image }} style={styles.alsoLikeImage} />
+                        ) : (
+                          <Image source={r.image} style={styles.alsoLikeImage} />
+                        )}
+                      </View>
+                    )}
+                    <Text style={styles.alsoLikeCardTitle}>{r.title}</Text>
+                    <View style={styles.alsoLikeCardMeta}>
+                      <Ionicons name="star" size={12} color="#FFD700" />
+                      <Text style={styles.alsoLikeCardRating}>4.4</Text>
+                      <Text style={styles.alsoLikeCardTime}>
+                        {((r.prepTime || 0) + (r.cookTime || 0)) || '30'} mins
+                      </Text>
                     </View>
-                  )}
-                  <Text style={styles.alsoLikeCardTitle}>{r.title}</Text>
-                  <View style={styles.alsoLikeCardMeta}>
-                    <Ionicons name="star" size={12} color="#FFD700" />
-                    <Text style={styles.alsoLikeCardRating}>4.4</Text>
-                    <Text style={styles.alsoLikeCardTime}>
-                      {((r.prepTime || 0) + (r.cookTime || 0)) || '30'} mins
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -1715,7 +1715,7 @@ const RecipeDetailScreen: React.FC = () => {
           <TouchableOpacity
             style={styles.modalContentContainer}
             activeOpacity={1}
-            onPress={() => {}}
+            onPress={() => { }}
           >
             <View style={styles.modalContent}>
               {selectedIngredientImage && (
@@ -1789,16 +1789,16 @@ const RecipeDetailScreen: React.FC = () => {
             <View style={styles.addToMenuImageContainer}>
               {recipe.image ? (
                 typeof recipe.image === 'string' ? (
-                  <Image 
-                    source={{ uri: recipe.image }} 
-                    style={styles.addToMenuImage} 
-                    resizeMode="cover" 
+                  <Image
+                    source={{ uri: recipe.image }}
+                    style={styles.addToMenuImage}
+                    resizeMode="cover"
                   />
                 ) : (
-                  <Image 
-                    source={recipe.image} 
-                    style={styles.addToMenuImage} 
-                    resizeMode="cover" 
+                  <Image
+                    source={recipe.image}
+                    style={styles.addToMenuImage}
+                    resizeMode="cover"
                   />
                 )
               ) : (
@@ -1815,36 +1815,36 @@ const RecipeDetailScreen: React.FC = () => {
 
             {/* THIS WEEK Section */}
             <View style={styles.thisWeekSection}>
-              <TouchableOpacity 
-                onPress={handlePreviousWeek} 
+              <TouchableOpacity
+                onPress={handlePreviousWeek}
                 style={[
                   styles.weekNavButton,
                   weekOffset === 0 && styles.weekNavButtonDisabled
                 ]}
                 disabled={weekOffset === 0}
               >
-                <Ionicons 
-                  name="chevron-back" 
-                  size={20} 
-                  color={weekOffset === 0 ? '#CCCCCC' : '#1A1A1A'} 
+                <Ionicons
+                  name="chevron-back"
+                  size={20}
+                  color={weekOffset === 0 ? '#CCCCCC' : '#1A1A1A'}
                 />
               </TouchableOpacity>
               <View style={styles.thisWeekContent}>
                 <Ionicons name="calendar-outline" size={18} color="#1A1A1A" />
                 <Text style={styles.thisWeekText}>{getWeekLabel(weekOffset)}</Text>
               </View>
-              <TouchableOpacity 
-                onPress={handleNextWeek} 
+              <TouchableOpacity
+                onPress={handleNextWeek}
                 style={[
                   styles.weekNavButton,
                   weekOffset >= 3 && styles.weekNavButtonDisabled
                 ]}
                 disabled={weekOffset >= 3}
               >
-                <Ionicons 
-                  name="chevron-forward" 
-                  size={20} 
-                  color={weekOffset >= 3 ? '#CCCCCC' : '#1A1A1A'} 
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={weekOffset >= 3 ? '#CCCCCC' : '#1A1A1A'}
                 />
               </TouchableOpacity>
             </View>
@@ -1861,7 +1861,7 @@ const RecipeDetailScreen: React.FC = () => {
                 const dateStr = formatDateKey(date); // Use local timezone format
                 const dayName = dayNames[index];
                 const isSelected = selectedDay === dateStr;
-                
+
                 return (
                   <TouchableOpacity
                     key={dateStr}
@@ -1898,9 +1898,9 @@ const RecipeDetailScreen: React.FC = () => {
                     onPress={() => setSelectedMealType(mealType.id)}
                     activeOpacity={0.7}
                   >
-                    <Ionicons 
-                      name={mealType.icon as any} 
-                      size={20} 
+                    <Ionicons
+                      name={mealType.icon as any}
+                      size={20}
                       color={isSelected ? getMealTypeColor(mealType.id) : '#666'}
                       style={{ marginRight: 8 }}
                     />
@@ -1999,8 +1999,8 @@ const RecipeDetailScreen: React.FC = () => {
               <Ionicons name="close" size={20} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
-          <ScrollView 
-            style={styles.methodScrollView} 
+          <ScrollView
+            style={styles.methodScrollView}
             contentContainerStyle={[styles.methodScrollViewContent, { paddingBottom: Math.max(insets.bottom, 20) + 100 }]}
             showsVerticalScrollIndicator={false}
           >
@@ -2012,15 +2012,15 @@ const RecipeDetailScreen: React.FC = () => {
                   const titleMatch = description.match(/^([^.!?]+[.!?]?)/);
                   const title = titleMatch ? titleMatch[1].trim() : `Step ${step.order || index + 1}`;
                   const remainingText = titleMatch ? description.substring(titleMatch[0].length).trim() : description;
-                  
+
                   return (
                     <React.Fragment key={step.id || index}>
                       <View style={styles.methodStepCard}>
                         {/* Thumbnail */}
                         <View style={styles.methodStepThumbnail}>
                           {step.image ? (
-                            <Image 
-                              source={{ uri: step.image }} 
+                            <Image
+                              source={{ uri: step.image }}
                               style={styles.methodStepThumbnailImage}
                               resizeMode="cover"
                             />
@@ -2030,17 +2030,17 @@ const RecipeDetailScreen: React.FC = () => {
                             </View>
                           )}
                         </View>
-                        
+
                         {/* Content */}
                         <View style={styles.methodStepCardContent}>
                           {/* Title */}
                           <Text style={styles.methodStepTitle}>{title}</Text>
-                          
+
                           {/* Description */}
                           {remainingText && (
                             <Text style={styles.methodStepDescription}>{remainingText}</Text>
                           )}
-                          
+
                           {/* Timer Button */}
                           {step.duration && step.duration > 0 && (() => {
                             const stepDuration = step.duration!; // Safe because we checked above
@@ -2108,7 +2108,7 @@ const RecipeDetailScreen: React.FC = () => {
                           })()}
                         </View>
                       </View>
-                      
+
                       {/* Separator */}
                       {index < recipe.steps.length - 1 && (
                         <View style={styles.methodStepSeparator} />
@@ -2121,7 +2121,7 @@ const RecipeDetailScreen: React.FC = () => {
               <Text style={styles.emptyText}>No instructions available</Text>
             )}
           </ScrollView>
-          
+
           {/* Complete Recipe Button */}
           <View style={[styles.methodCompleteButtonContainer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
             <TouchableOpacity
@@ -2268,16 +2268,16 @@ const RecipeDetailScreen: React.FC = () => {
                   <View style={styles.recipeOptionsImageContainer}>
                     {recipe.image ? (
                       typeof recipe.image === 'string' ? (
-                        <Image 
-                          source={{ uri: recipe.image }} 
-                          style={styles.recipeOptionsImage} 
-                          resizeMode="cover" 
+                        <Image
+                          source={{ uri: recipe.image }}
+                          style={styles.recipeOptionsImage}
+                          resizeMode="cover"
                         />
                       ) : (
-                        <Image 
-                          source={recipe.image} 
-                          style={styles.recipeOptionsImage} 
-                          resizeMode="cover" 
+                        <Image
+                          source={recipe.image}
+                          style={styles.recipeOptionsImage}
+                          resizeMode="cover"
                         />
                       )
                     ) : (
@@ -2315,6 +2315,28 @@ const RecipeDetailScreen: React.FC = () => {
                   >
                     <Ionicons name="checkmark-circle-outline" size={24} color="#1A1A1A" />
                     <Text style={styles.recipeOptionText}>I'll cook this today</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#999999" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.recipeOptionItem}
+                    onPress={() => {
+                      setShowRecipeOptionsBottomSheet(false);
+                      // Navigate to IngredientSelection with a constructed meal plan item
+                      // We use a temporary ID since it's not actually in the meal plan yet
+                      navigation.navigate('IngredientSelection', {
+                        selectedMealPlans: [{
+                          mealPlanId: `temp-${Date.now()}`,
+                          recipeId: recipe.id,
+                          recipeTitle: recipe.title,
+                          date: new Date().toISOString().split('T')[0], // Today's date as default
+                          mealType: 'dinner', // Default callback
+                        }]
+                      });
+                    }}
+                  >
+                    <Ionicons name="cart-outline" size={24} color="#1A1A1A" />
+                    <Text style={styles.recipeOptionText}>Add to groceries</Text>
                     <Ionicons name="chevron-forward" size={20} color="#999999" />
                   </TouchableOpacity>
 
@@ -2407,14 +2429,14 @@ const RecipeDetailScreen: React.FC = () => {
                           id: `meal-${Date.now()}`,
                           recipeId: recipe.id,
                           recipeTitle: recipe.title,
-                          recipeImage: typeof recipe.image === 'string' 
-                            ? recipe.image 
+                          recipeImage: typeof recipe.image === 'string'
+                            ? recipe.image
                             : undefined,
                           mealType: mealType as 'breakfast' | 'lunch' | 'dinner' | 'snack',
                           date: todayDate,
                           includeInGrocery: true,
                         };
-                        
+
                         addMealPlan(newMealPlan);
 
                         // Automatically add ingredients to groceries list if includeInGrocery is true
@@ -2446,7 +2468,7 @@ const RecipeDetailScreen: React.FC = () => {
                           addItems(adjustedIngredients, recipe.id, recipe.title, servings, sources);
                           console.log('🛒 Added ingredients to groceries list:', adjustedIngredients.length);
                         }
-                        
+
                         setShowRecipeOptionsBottomSheet(false);
                         setShowMealTypeSelection(false);
                       }}
@@ -2482,15 +2504,15 @@ const RecipeDetailScreen: React.FC = () => {
                 <Text style={styles.collectionSelectionTitle}>Select Collections</Text>
                 <Text style={styles.collectionSelectionSubtitle}>A recipe can be in multiple collections</Text>
               </View>
-              
+
               {/* Collection Options */}
               {collections.map((collection, index) => {
                 // Support both old cookbook format and new collections array format
-                const currentCollections = recipe && (recipe as any).collections 
-                  ? (recipe as any).collections 
+                const currentCollections = recipe && (recipe as any).collections
+                  ? (recipe as any).collections
                   : ((recipe as any).cookbook ? [(recipe as any).cookbook] : []);
                 const isSelected = Array.isArray(currentCollections) && currentCollections.includes(collection);
-                
+
                 return (
                   <TouchableOpacity
                     key={index}
@@ -2500,26 +2522,26 @@ const RecipeDetailScreen: React.FC = () => {
                     ]}
                     onPress={async () => {
                       if (!recipe) return;
-                      
+
                       try {
                         // Toggle collection: add if not selected, remove if selected
                         const updatedCollections = isSelected
                           ? currentCollections.filter((col: string) => col !== collection)
                           : [...currentCollections, collection];
-                        
+
                         // Update recipe's collections property via backend
                         const updateRecipeFunction = httpsCallable(functions, 'updateRecipe');
                         await updateRecipeFunction({
                           recipeId: recipe.id,
                           collections: updatedCollections.length > 0 ? updatedCollections : [],
                         });
-                        
+
                         // Update local state
                         updateRecipe(recipe.id, { collections: updatedCollections });
-                        
+
                         // Update recipe state
                         setRecipe({ ...recipe, collections: updatedCollections } as ExtendedRecipe);
-                        
+
                         // Show success toast
                         if (isSelected) {
                           setToastMessage(`Removed from "${collection}"`);
@@ -2555,7 +2577,7 @@ const RecipeDetailScreen: React.FC = () => {
                   </TouchableOpacity>
                 );
               })}
-              
+
               {/* Create New Collection */}
               <TouchableOpacity
                 style={styles.createCollectionButton}
@@ -2581,7 +2603,7 @@ const RecipeDetailScreen: React.FC = () => {
                 <Text style={styles.createCollectionTitle}>New Collection</Text>
                 <View style={{ width: 40 }} />
               </View>
-              
+
               <TextInput
                 style={styles.createCollectionInput}
                 placeholder="Collection name"
@@ -2590,7 +2612,7 @@ const RecipeDetailScreen: React.FC = () => {
                 onChangeText={setNewCollectionName}
                 autoFocus
               />
-              
+
               <TouchableOpacity
                 style={[
                   styles.createCollectionSaveButton,
@@ -2598,34 +2620,34 @@ const RecipeDetailScreen: React.FC = () => {
                 ]}
                 onPress={async () => {
                   if (!newCollectionName.trim() || !recipe) return;
-                  
+
                   try {
                     // Create new collection
                     await addCollection(newCollectionName.trim());
-                    
+
                     // Get current collections (support both old and new format)
-                    const currentCollections = recipe && (recipe as any).collections 
-                      ? (recipe as any).collections 
+                    const currentCollections = recipe && (recipe as any).collections
+                      ? (recipe as any).collections
                       : ((recipe as any).cookbook ? [(recipe as any).cookbook] : []);
                     const updatedCollections = [...currentCollections, newCollectionName.trim()];
-                    
+
                     // Update recipe's collections property via backend
                     const updateRecipeFunction = httpsCallable(functions, 'updateRecipe');
                     await updateRecipeFunction({
                       recipeId: recipe.id,
                       collections: updatedCollections,
                     });
-                    
+
                     // Update local state
                     updateRecipe(recipe.id, { collections: updatedCollections });
-                    
+
                     // Update recipe state
                     setRecipe({ ...recipe, collections: updatedCollections } as ExtendedRecipe);
-                    
+
                     setNewCollectionName('');
                     setShowCreateCollection(false);
                     setShowCollectionSelection(false);
-                    
+
                     // Show success toast
                     setToastMessage(`Added to "${newCollectionName.trim()}"`);
                     setToastType('success');

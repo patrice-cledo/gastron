@@ -24,8 +24,8 @@ service cloud.firestore {
       // - Their own recipes (public or private)
       // - Public recipes (isPublic == true)
       allow read: if isAuthenticated() && (
-        (resource.data.userId == request.auth.uid) ||
-        (resource.data.isPublic == true)
+        (resource.data.keys().hasAny(['userId']) && resource.data.userId == request.auth.uid) ||
+        (resource.data.keys().hasAny(['isPublic']) && resource.data.isPublic == true)
       );
       
       // Users can create recipes (must set userId and isPublic)

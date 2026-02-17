@@ -7,6 +7,29 @@ import { useRecipeImport } from '../hooks/useRecipeImport';
 // Helper to generate simple IDs
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
+const CUISINES = [
+    'Italian', 'Mexican', 'Chinese', 'Japanese', 'Indian', 'French', 'Thai',
+    'Mediterranean', 'American', 'Korean', 'Vietnamese', 'Greek', 'Spanish',
+    'Middle Eastern', 'Caribbean', 'Other'
+];
+
+const TAG_CATEGORIES = {
+    'Meal Type': [
+        'Dinner', 'Breakfast', 'Lunch', 'Snack', 'Dessert', 'Salad', 'Drink',
+        'Appetizer', 'Finger food', 'Side', 'Soup', 'Cocktail', 'Sauce', 'Dressing'
+    ],
+    'Diet': [
+        'Vegetarian', 'Vegan', 'Pescatarian', 'Healthy', 'High Protein', 'Gluten-free',
+        'No alcohol', 'Comfort food', 'Low-fat', 'Keto', 'Paleo', 'Dairy-free',
+        'Low-sugar', 'Sugar-free', 'Low-carb', 'Kosher', 'Halal', 'FODMAP'
+    ],
+    'Other': [
+        'Budget-friendly', 'Meal prep', 'One-Pot', 'Pantry staples', 'Freezer-friendly',
+        'Entertaining', 'Weeknight dinner', 'Crowd-pleaser', 'Kid-friendly',
+        'Allergy-friendly', 'Gourmet', 'Family recipe', 'Spicy', 'Crockpot'
+    ]
+};
+
 interface RecipeFormProps {
     onSuccess: () => void;
     onCancel: () => void;
@@ -30,7 +53,11 @@ export function RecipeForm({ onSuccess, onCancel, initialRecipe }: RecipeFormPro
     const [cookTime, setCookTime] = useState<number | ''>('');
     const [servings, setServings] = useState<number | ''>('');
     const [isPublic, setIsPublic] = useState(true);
-    const [tags, setTags] = useState('');
+
+    // Categorization State
+    const [cuisine, setCuisine] = useState('');
+    const [selectedTags, setSelectedTags] = useState<string[]>([]);
+    const [customTagInput, setCustomTagInput] = useState('');
 
     const [ingredients, setIngredients] = useState<RecipeIngredient[]>([
         { id: generateId(), name: '', amount: '', unit: '' }
@@ -47,6 +74,37 @@ export function RecipeForm({ onSuccess, onCancel, initialRecipe }: RecipeFormPro
         fats: 0
     });
 
+    // Section Visibility State
+    const [expandedSections, setExpandedSections] = useState({
+        basic: true,
+        categorization: true,
+        ingredients: true,
+        instructions: true,
+        nutrition: true
+    });
+
+    const toggleSection = (section: keyof typeof expandedSections) => {
+        setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+    };
+
+    const SectionHeader = ({ title, section, className = "" }: { title: string, section: keyof typeof expandedSections, className?: string }) => (
+        <button
+            type="button"
+            onClick={() => toggleSection(section)}
+            className={`flex items-center justify-between w-full text-left bg-gray-50 p-3 rounded-lg hover:bg-gray-100 transition-colors ${className}`}
+        >
+            <span className="text-lg font-medium text-gray-900">{title}</span>
+            <svg
+                className={`w-5 h-5 text-gray-500 transform transition-transform duration-200 ${expandedSections[section] ? 'rotate-180' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+            >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+        </button>
+    );
+
     useEffect(() => {
         if (initialRecipe) {
             setTitle(initialRecipe.title);
@@ -57,7 +115,10 @@ export function RecipeForm({ onSuccess, onCancel, initialRecipe }: RecipeFormPro
             setCookTime(initialRecipe.cookTime || '');
             setServings(initialRecipe.servings || '');
             setIsPublic(initialRecipe.isPublic ?? true);
-            setTags(initialRecipe.tags?.join(', ') || '');
+
+            // Populate categorization
+            setCuisine(initialRecipe.cuisine || '');
+            setSelectedTags(initialRecipe.tags || []);
 
             if (initialRecipe.ingredients?.length) {
                 setIngredients(initialRecipe.ingredients);
@@ -80,7 +141,8 @@ export function RecipeForm({ onSuccess, onCancel, initialRecipe }: RecipeFormPro
         setCookTime(draft.cookMinutes || '');
         setServings(draft.servings || '');
 
-        if (draft.tags) setTags(draft.tags.join(', '));
+        if (draft.tags) setSelectedTags(draft.tags);
+        if ((draft as any).cuisine) setCuisine((draft as any).cuisine);
 
         if (draft.ingredients && draft.ingredients.length > 0) {
             setIngredients(draft.ingredients.map(ing => ({
@@ -159,6 +221,29 @@ export function RecipeForm({ onSuccess, onCancel, initialRecipe }: RecipeFormPro
         setSteps(steps.map(s => s.id === id ? { ...s, description: value } : s));
     };
 
+    const toggleTag = (tag: string) => {
+        setSelectedTags(prev =>
+            prev.includes(tag)
+                ? prev.filter(t => t !== tag)
+                : [...prev, tag]
+        );
+    };
+
+    const handleAddCustomTag = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && customTagInput.trim()) {
+            e.preventDefault();
+            const newTag = customTagInput.trim();
+            if (!selectedTags.includes(newTag)) {
+                setSelectedTags([...selectedTags, newTag]);
+            }
+            setCustomTagInput('');
+        }
+    };
+
+    const removeTag = (tag: string) => {
+        setSelectedTags(selectedTags.filter(t => t !== tag));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
@@ -188,7 +273,8 @@ export function RecipeForm({ onSuccess, onCancel, initialRecipe }: RecipeFormPro
                 ingredients: validIngredients,
                 steps: validSteps,
                 nutrition,
-                tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+                cuisine,
+                tags: selectedTags,
                 createdAt: initialRecipe?.createdAt || Date.now(),
                 updatedAt: Date.now(),
             };
@@ -271,7 +357,7 @@ export function RecipeForm({ onSuccess, onCancel, initialRecipe }: RecipeFormPro
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-8 bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 space-y-6">
                 <div className="flex justify-between items-center border-b pb-4">
                     <h2 className="text-xl font-semibold text-gray-900">{initialRecipe ? 'Edit Recipe' : 'Create New Recipe'}</h2>
                     <div className="space-x-2">
@@ -290,229 +376,356 @@ export function RecipeForm({ onSuccess, onCancel, initialRecipe }: RecipeFormPro
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-                    {/* Basic Info */}
-                    <div className="sm:col-span-4">
-                        <label className="block text-sm font-medium text-gray-700">Title</label>
-                        <input
-                            type="text"
-                            required
-                            value={title}
-                            onChange={e => setTitle(e.target.value)}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                        />
-                    </div>
-
-                    <div className="sm:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700">Image URL</label>
-                        <input
-                            type="text"
-                            value={image}
-                            onChange={e => setImage(e.target.value)}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                        />
-                    </div>
-
-                    <div className="sm:col-span-6">
-                        <label className="block text-sm font-medium text-gray-700">Description</label>
-                        <textarea
-                            rows={3}
-                            value={description}
-                            onChange={e => setDescription(e.target.value)}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                        />
-                    </div>
-
-                    <div className="sm:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700">Prep Time (mins)</label>
-                        <input
-                            type="number"
-                            value={prepTime}
-                            onChange={e => setPrepTime(e.target.value ? Number(e.target.value) : '')}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                        />
-                    </div>
-
-                    <div className="sm:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700">Cook Time (mins)</label>
-                        <input
-                            type="number"
-                            value={cookTime}
-                            onChange={e => setCookTime(e.target.value ? Number(e.target.value) : '')}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                        />
-                    </div>
-
-                    <div className="sm:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700">Servings</label>
-                        <input
-                            type="number"
-                            value={servings}
-                            onChange={e => setServings(e.target.value ? Number(e.target.value) : '')}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                        />
-                    </div>
-
-                    <div className="sm:col-span-3">
-                        <label className="block text-sm font-medium text-gray-700">Source URL</label>
-                        <input
-                            type="text"
-                            value={sourceUrl}
-                            onChange={e => setSourceUrl(e.target.value)}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                        />
-                    </div>
-
-                    <div className="sm:col-span-3">
-                        <label className="block text-sm font-medium text-gray-700">Tags (comma separated)</label>
-                        <input
-                            type="text"
-                            value={tags}
-                            onChange={e => setTags(e.target.value)}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                            placeholder="dinner, healthy, chicken"
-                        />
-                    </div>
-
-                    <div className="sm:col-span-6">
-                        <div className="flex items-center">
-                            <input
-                                id="is-public"
-                                type="checkbox"
-                                checked={isPublic}
-                                onChange={e => setIsPublic(e.target.checked)}
-                                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                            />
-                            <label htmlFor="is-public" className="ml-2 block text-sm text-gray-900">
-                                Public Recipe (visible to all users)
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Ingredients */}
+                {/* Section 1: Basic Details */}
                 <div>
-                    <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Ingredients</h3>
-                    {ingredients.map((ing) => (
-                        <div key={ing.id} className="flex gap-2 mb-2 items-start">
-                            <input
-                                type="text"
-                                required
-                                placeholder="Amount (e.g. 2)"
-                                value={ing.amount}
-                                onChange={e => handleIngredientChange(ing.id, 'amount', e.target.value)}
-                                className="w-24 rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                            />
-                            <input
-                                type="text"
-                                placeholder="Unit (e.g. cups)"
-                                value={ing.unit || ''}
-                                onChange={e => handleIngredientChange(ing.id, 'unit', e.target.value)}
-                                className="w-24 rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                            />
-                            <input
-                                type="text"
-                                required
-                                placeholder="Ingredient Name"
-                                value={ing.name}
-                                onChange={e => handleIngredientChange(ing.id, 'name', e.target.value)}
-                                className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                            />
-                            {ingredients.length > 1 && (
-                                <button
-                                    type="button"
-                                    onClick={() => handleRemoveIngredient(ing.id)}
-                                    className="p-2 text-red-600 hover:text-red-800"
+                    <SectionHeader title="Basic Details" section="basic" />
+                    {expandedSections.basic && (
+                        <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6 mt-4 px-1">
+                            {/* Basic Info */}
+                            <div className="sm:col-span-4">
+                                <label className="block text-sm font-medium text-gray-700">Title</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={title}
+                                    onChange={e => setTitle(e.target.value)}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                />
+                            </div>
+
+                            <div className="sm:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700">Image URL</label>
+                                <input
+                                    type="text"
+                                    value={image}
+                                    onChange={e => setImage(e.target.value)}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                />
+                            </div>
+
+                            <div className="sm:col-span-6">
+                                <label className="block text-sm font-medium text-gray-700">Description</label>
+                                <textarea
+                                    rows={3}
+                                    value={description}
+                                    onChange={e => setDescription(e.target.value)}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                />
+                            </div>
+
+                            <div className="sm:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700">Prep Time (mins)</label>
+                                <input
+                                    type="number"
+                                    value={prepTime}
+                                    onChange={e => setPrepTime(e.target.value ? Number(e.target.value) : '')}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                />
+                            </div>
+
+                            <div className="sm:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700">Cook Time (mins)</label>
+                                <input
+                                    type="number"
+                                    value={cookTime}
+                                    onChange={e => setCookTime(e.target.value ? Number(e.target.value) : '')}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                />
+                            </div>
+
+                            <div className="sm:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700">Servings</label>
+                                <input
+                                    type="number"
+                                    value={servings}
+                                    onChange={e => setServings(e.target.value ? Number(e.target.value) : '')}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                />
+                            </div>
+
+                            <div className="sm:col-span-3">
+                                <label className="block text-sm font-medium text-gray-700">Source URL</label>
+                                <input
+                                    type="text"
+                                    value={sourceUrl}
+                                    onChange={e => setSourceUrl(e.target.value)}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                />
+                            </div>
+
+                            <div className="sm:col-span-3">
+                                <label className="block text-sm font-medium text-gray-700">Cuisine</label>
+                                <select
+                                    value={cuisine}
+                                    onChange={e => setCuisine(e.target.value)}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
                                 >
-                                    &times;
-                                </button>
-                            )}
+                                    <option value="">Select Cuisine</option>
+                                    {CUISINES.map(c => (
+                                        <option key={c} value={c}>{c}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="sm:col-span-6">
+                                <div className="flex items-center">
+                                    <input
+                                        id="is-public"
+                                        type="checkbox"
+                                        checked={isPublic}
+                                        onChange={e => setIsPublic(e.target.checked)}
+                                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                    />
+                                    <label htmlFor="is-public" className="ml-2 block text-sm text-gray-900">
+                                        Public Recipe (visible to all users)
+                                    </label>
+                                </div>
+                            </div>
                         </div>
-                    ))}
-                    <button
-                        type="button"
-                        onClick={handleAddIngredient}
-                        className="mt-2 text-sm text-primary hover:text-primary-dark font-medium"
-                    >
-                        + Add Ingredient
-                    </button>
+                    )}
                 </div>
 
-                {/* Steps */}
+                {/* Section 2: Categorization */}
                 <div>
-                    <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Instructions</h3>
-                    {steps.map((step, index) => (
-                        <div key={step.id} className="flex gap-2 mb-2 items-start">
-                            <span className="mt-2 text-sm text-gray-500 w-6 text-right">{index + 1}.</span>
-                            <textarea
-                                required
-                                rows={2}
-                                placeholder="Describe this step..."
-                                value={step.description}
-                                onChange={e => handleStepChange(step.id, e.target.value)}
-                                className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                            />
-                            {steps.length > 1 && (
-                                <button
-                                    type="button"
-                                    onClick={() => handleRemoveStep(step.id)}
-                                    className="p-2 text-red-600 hover:text-red-800"
-                                >
-                                    &times;
-                                </button>
-                            )}
+                    <SectionHeader title="Categorization" section="categorization" />
+                    {expandedSections.categorization && (
+                        <div className="mt-4 px-1 space-y-4">
+                            {/* Active Tags & Custom Input */}
+                            <div className="space-y-3">
+                                <div className="flex flex-wrap gap-2">
+                                    {selectedTags.map(tag => (
+                                        <span key={tag} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                                            {tag}
+                                            <button
+                                                type="button"
+                                                onClick={() => removeTag(tag)}
+                                                className="ml-1.5 inline-flex items-center justify-center text-primary hover:text-primary-dark"
+                                            >
+                                                &times;
+                                            </button>
+                                        </span>
+                                    ))}
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        value={customTagInput}
+                                        onChange={e => setCustomTagInput(e.target.value)}
+                                        onKeyDown={handleAddCustomTag}
+                                        placeholder="Type tag and press Enter..."
+                                        className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (customTagInput.trim()) {
+                                                if (!selectedTags.includes(customTagInput.trim())) {
+                                                    setSelectedTags([...selectedTags, customTagInput.trim()]);
+                                                }
+                                                setCustomTagInput('');
+                                            }
+                                        }}
+                                        className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md text-sm hover:bg-gray-200"
+                                    >
+                                        Add
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Predefined Categories */}
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-gray-50 p-4 rounded-lg">
+                                {/* Meal Type */}
+                                <div>
+                                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Meal Type</h4>
+                                    <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                                        {TAG_CATEGORIES['Meal Type'].map(tag => (
+                                            <label key={tag} className="flex items-center space-x-2 text-sm">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedTags.includes(tag)}
+                                                    onChange={() => toggleTag(tag)}
+                                                    className="rounded border-gray-300 text-primary focus:ring-primary"
+                                                />
+                                                <span>{tag}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Diet */}
+                                <div>
+                                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Dietary</h4>
+                                    <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                                        {TAG_CATEGORIES['Diet'].map(tag => (
+                                            <label key={tag} className="flex items-center space-x-2 text-sm">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedTags.includes(tag)}
+                                                    onChange={() => toggleTag(tag)}
+                                                    className="rounded border-gray-300 text-primary focus:ring-primary"
+                                                />
+                                                <span>{tag}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Other Tags */}
+                                <div>
+                                    <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Other Tags</h4>
+                                    <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                                        {TAG_CATEGORIES['Other'].map(tag => (
+                                            <label key={tag} className="flex items-center space-x-2 text-sm">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedTags.includes(tag)}
+                                                    onChange={() => toggleTag(tag)}
+                                                    className="rounded border-gray-300 text-primary focus:ring-primary"
+                                                />
+                                                <span>{tag}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    ))}
-                    <button
-                        type="button"
-                        onClick={handleAddStep}
-                        className="mt-2 text-sm text-primary hover:text-primary-dark font-medium"
-                    >
-                        + Add Step
-                    </button>
+                    )}
                 </div>
 
-                {/* Nutrition */}
+                {/* Section 3: Ingredients */}
                 <div>
-                    <h3 className="text-lg font-medium text-gray-900 border-b pb-2 mb-4">Nutrition (per serving)</h3>
-                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Calories</label>
-                            <input
-                                type="number"
-                                value={nutrition.calories}
-                                onChange={e => setNutrition({ ...nutrition, calories: Number(e.target.value) })}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                            />
+                    <SectionHeader title="Ingredients" section="ingredients" />
+                    {expandedSections.ingredients && (
+                        <div className="mt-4 px-1">
+                            {ingredients.map((ing) => (
+                                <div key={ing.id} className="flex gap-2 mb-2 items-start">
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="Amount"
+                                        value={ing.amount}
+                                        onChange={e => handleIngredientChange(ing.id, 'amount', e.target.value)}
+                                        className="w-24 rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="Unit"
+                                        value={ing.unit || ''}
+                                        onChange={e => handleIngredientChange(ing.id, 'unit', e.target.value)}
+                                        className="w-24 rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                    />
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="Ingredient Name"
+                                        value={ing.name}
+                                        onChange={e => handleIngredientChange(ing.id, 'name', e.target.value)}
+                                        className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                    />
+                                    {ingredients.length > 1 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveIngredient(ing.id)}
+                                            className="p-2 text-red-600 hover:text-red-800"
+                                        >
+                                            &times;
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                            <button
+                                type="button"
+                                onClick={handleAddIngredient}
+                                className="mt-2 text-sm text-primary hover:text-primary-dark font-medium"
+                            >
+                                + Add Ingredient
+                            </button>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Protein (g)</label>
-                            <input
-                                type="number"
-                                value={nutrition.protein}
-                                onChange={e => setNutrition({ ...nutrition, protein: Number(e.target.value) })}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                            />
+                    )}
+                </div>
+
+                {/* Section 4: Instructions */}
+                <div>
+                    <SectionHeader title="Instructions" section="instructions" />
+                    {expandedSections.instructions && (
+                        <div className="mt-4 px-1">
+                            {steps.map((step, index) => (
+                                <div key={step.id} className="flex gap-2 mb-2 items-start">
+                                    <span className="mt-2 text-sm text-gray-500 w-6 text-right">{index + 1}.</span>
+                                    <textarea
+                                        required
+                                        rows={2}
+                                        placeholder="Describe this step..."
+                                        value={step.description}
+                                        onChange={e => handleStepChange(step.id, e.target.value)}
+                                        className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                    />
+                                    {steps.length > 1 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveStep(step.id)}
+                                            className="p-2 text-red-600 hover:text-red-800"
+                                        >
+                                            &times;
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                            <button
+                                type="button"
+                                onClick={handleAddStep}
+                                className="mt-2 text-sm text-primary hover:text-primary-dark font-medium"
+                            >
+                                + Add Step
+                            </button>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Carbs (g)</label>
-                            <input
-                                type="number"
-                                value={nutrition.carbs}
-                                onChange={e => setNutrition({ ...nutrition, carbs: Number(e.target.value) })}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                            />
+                    )}
+                </div>
+
+                {/* Section 5: Nutrition */}
+                <div>
+                    <SectionHeader title="Nutrition (per serving)" section="nutrition" />
+                    {expandedSections.nutrition && (
+                        <div className="mt-4 px-1 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Calories</label>
+                                <input
+                                    type="number"
+                                    value={nutrition.calories}
+                                    onChange={e => setNutrition({ ...nutrition, calories: Number(e.target.value) })}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Protein (g)</label>
+                                <input
+                                    type="number"
+                                    value={nutrition.protein}
+                                    onChange={e => setNutrition({ ...nutrition, protein: Number(e.target.value) })}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Carbs (g)</label>
+                                <input
+                                    type="number"
+                                    value={nutrition.carbs}
+                                    onChange={e => setNutrition({ ...nutrition, carbs: Number(e.target.value) })}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Fats (g)</label>
+                                <input
+                                    type="number"
+                                    value={nutrition.fats}
+                                    onChange={e => setNutrition({ ...nutrition, fats: Number(e.target.value) })}
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
+                                />
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">Fats (g)</label>
-                            <input
-                                type="number"
-                                value={nutrition.fats}
-                                onChange={e => setNutrition({ ...nutrition, fats: Number(e.target.value) })}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary sm:text-sm"
-                            />
-                        </div>
-                    </div>
+                    )}
                 </div>
             </form>
         </div>

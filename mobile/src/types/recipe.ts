@@ -41,6 +41,11 @@ export interface Recipe {
   nutrition?: Nutrition; // per serving
   tags?: string[]; // Tags for categorization/search
   collections?: string[]; // Array of collection/cookbook names (e.g., ["Favorites", "Want to cook", "One-Pot"])
+  notes?: string;
+  chefTips?: string[];
+  cookbook?: string; // Legacy field for single collection
+  cuisine?: string;
+  sourceUrls?: string[];
   userId?: string; // Firebase Auth user ID
   createdAt: string;
   updatedAt: string;

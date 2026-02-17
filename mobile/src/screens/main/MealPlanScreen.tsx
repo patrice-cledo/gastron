@@ -36,7 +36,7 @@ const MealPlanScreen: React.FC = () => {
   const navigation = useNavigation<MealPlanScreenNavigationProp>();
   const route = useRoute<MealPlanScreenRouteProp>();
   const { mealPlans, addMealPlan, updateMealPlan, removeMealPlan, clearMealPlansForDate, syncFromFirebase, enrichMealPlansWithRecipes } = useMealPlanStore();
-  const { recipes, updateRecipe } = useRecipesStore();
+  const { recipes, updateRecipe, addRecipe } = useRecipesStore();
   const { addItems, removeItem, updateItem, items } = useGroceriesStore();
   const { collections, loadCollections, addCollection } = useCollectionsStore();
   const [showMealTypeModal, setShowMealTypeModal] = useState(false);
@@ -67,12 +67,12 @@ const MealPlanScreen: React.FC = () => {
 
   // Helper to check if a string is a storage path (not a URL)
   const isStoragePath = (image: string): boolean => {
-    return typeof image === 'string' && 
-           !image.startsWith('http://') && 
-           !image.startsWith('https://') &&
-           !image.startsWith('file://') &&
-           !image.startsWith('content://') &&
-           image.includes('/');
+    return typeof image === 'string' &&
+      !image.startsWith('http://') &&
+      !image.startsWith('https://') &&
+      !image.startsWith('file://') &&
+      !image.startsWith('content://') &&
+      image.includes('/');
   };
 
   // Convert storage path to download URL for meal plan images
@@ -197,10 +197,10 @@ const MealPlanScreen: React.FC = () => {
     const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay; // Get to Monday
     const monday = new Date(today);
     monday.setDate(today.getDate() + mondayOffset + (offset * 7));
-    
+
     // Set to midnight to avoid timezone issues
     monday.setHours(0, 0, 0, 0);
-    
+
     const week = [];
     for (let i = 0; i < 7; i++) {
       const date = new Date(monday);
@@ -309,7 +309,7 @@ const MealPlanScreen: React.FC = () => {
       setSelectedDay(null);
       return;
     }
-    
+
     setSelectedMealType(mealType);
     setShowMealTypeModal(false);
     setShowRecipeSelectionModal(true);
@@ -338,7 +338,7 @@ const MealPlanScreen: React.FC = () => {
     if (newMealPlan.includeInGrocery && recipe.ingredients && recipe.ingredients.length > 0) {
       const recipeServings = recipe.servings || 4;
       const targetServings = newMealPlan.servingsOverride || recipeServings;
-      
+
       // Adjust ingredients based on servings
       const adjustedIngredients = recipe.ingredients.map(ing => ({
         ...ing,
@@ -356,7 +356,7 @@ const MealPlanScreen: React.FC = () => {
       addItems(adjustedIngredients, recipe.id, recipe.title, targetServings, sources);
       console.log('🛒 Added ingredients to groceries list:', adjustedIngredients.length);
     }
-    
+
     setShowRecipeSelectionModal(false);
     setSearchQuery('');
     setSelectedDay(null);
@@ -367,17 +367,17 @@ const MealPlanScreen: React.FC = () => {
   const allRecipes = useMemo(() => {
     // Get unique recipes by ID (starter recipes + recipes from store)
     const recipeMap = new Map<string, Recipe>();
-    
+
     // Add starter recipes first
     starterRecipes.forEach(recipe => {
       recipeMap.set(recipe.id, recipe);
     });
-    
+
     // Add recipes from store (will override starter recipes if same ID)
     recipes.forEach(recipe => {
       recipeMap.set(recipe.id, recipe);
     });
-    
+
     return Array.from(recipeMap.values());
   }, [recipes]);
 
@@ -424,7 +424,7 @@ const MealPlanScreen: React.FC = () => {
 
   const handleAddToGroceryList = (date: Date) => {
     const dayMealPlans = getMealPlansForDay(date);
-    
+
     // Pre-select all meal plans for this day
     if (dayMealPlans.length > 0) {
       navigation.navigate('ChooseRecipes', {
@@ -476,7 +476,7 @@ const MealPlanScreen: React.FC = () => {
         ...ing,
         amount: String(Number(ing.amount) * (servings / baseServings)),
       }));
-      
+
       // Create sources for each ingredient
       const sources: GrocerySource[] = adjustedIngredients.map((ing) => ({
         recipeId: recipe.id,
@@ -484,14 +484,14 @@ const MealPlanScreen: React.FC = () => {
         mealPlanEntryId: plan.id,
         amount: ing.amount,
       }));
-      
+
       addItems(adjustedIngredients, recipe.id, recipe.title, servings, sources);
     } else {
       // Remove items from grocery list that came from this meal plan entry
       const itemsToRemove = items.filter((item) =>
         item.sources?.some((source) => source.mealPlanEntryId === plan.id)
       );
-      
+
       // Remove items that only have this meal plan as source
       itemsToRemove.forEach((item) => {
         // Check if this is the only source for this item
@@ -520,7 +520,7 @@ const MealPlanScreen: React.FC = () => {
     const diff = currentDay === 0 ? -6 : 1 - currentDay; // Adjust to Monday
     const monday = new Date(today);
     monday.setDate(today.getDate() + diff + (offset * 7));
-    
+
     const dates = [];
     for (let i = 0; i < 7; i++) {
       const date = new Date(monday);
@@ -549,7 +549,7 @@ const MealPlanScreen: React.FC = () => {
 
     // Update the meal plan with new date
     updateMealPlan(selectedMealPlanForEdit.id, { date: editSelectedDay });
-    
+
     setShowEditRecipeModal(false);
     setSelectedMealPlanForEdit(null);
     setEditSelectedDay(null);
@@ -558,12 +558,12 @@ const MealPlanScreen: React.FC = () => {
 
   const handleMoveToNextWeek = () => {
     if (!selectedMealPlanForEdit) return;
-    
+
     const currentDate = new Date(selectedMealPlanForEdit.date);
     const nextWeekDate = new Date(currentDate);
     nextWeekDate.setDate(currentDate.getDate() + 7);
     const nextWeekKey = nextWeekDate.toISOString().split('T')[0];
-    
+
     updateMealPlan(selectedMealPlanForEdit.id, { date: nextWeekKey });
     setShowEditRecipeModal(false);
     setSelectedMealPlanForEdit(null);
@@ -573,7 +573,7 @@ const MealPlanScreen: React.FC = () => {
 
   const handleDeleteRecipe = () => {
     if (!selectedMealPlanForEdit) return;
-    
+
     removeMealPlan(selectedMealPlanForEdit.id);
     setShowEditRecipeModal(false);
     setSelectedMealPlanForEdit(null);
@@ -583,15 +583,15 @@ const MealPlanScreen: React.FC = () => {
 
   const handleShareRecipe = async () => {
     if (!selectedMealPlanForEdit) return;
-    
+
     try {
       const recipe = allRecipes.find(r => r.id === selectedMealPlanForEdit.recipeId);
       if (!recipe) return;
-      
+
       const shareMessage = `Check out this recipe: ${recipe.title}`;
       // TODO: Implement actual share functionality using React Native Share API
       console.log('Share recipe:', recipe.title);
-      
+
       setShowEditRecipeModal(false);
       setSelectedMealPlanForEdit(null);
     } catch (error) {
@@ -606,67 +606,194 @@ const MealPlanScreen: React.FC = () => {
     setShowCollectionSelection(true);
   };
 
+
+
   const handleToggleCollection = async (collection: string) => {
     if (!selectedMealPlanForEdit) return;
-    
+
     const recipe = allRecipes.find(r => r.id === selectedMealPlanForEdit.recipeId);
     if (!recipe) return;
-    
+
     // Support both old cookbook format and new collections array format
     const currentCollections = recipe.collections || (recipe.cookbook ? [recipe.cookbook] : []);
     const isSelected = Array.isArray(currentCollections) && currentCollections.includes(collection);
-    
+
     try {
+      // PROPOSED FIX: If user doesn't own recipe, CLONE it first
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
+
+      if (recipe.userId !== currentUser.uid) {
+        console.log('User does not own recipe, cloning...', recipe.id);
+
+        // Prepare data for new recipe (clone)
+        // We only add the NEW collection, ignoring previous collections of the public recipe
+        // unless we want to keep them? Usually public recipes don't have user collections.
+        // We'll start fresh with the selected collection.
+        const newCollections = [collection];
+
+        const newRecipeData = {
+          title: recipe.title,
+          description: recipe.description,
+          ingredients: recipe.ingredients,
+          steps: recipe.steps,
+          image: recipe.image,
+          servings: recipe.servings,
+          prepTime: recipe.prepTime,
+          cookTime: recipe.cookTime,
+          nutrition: recipe.nutrition,
+          equipment: recipe.equipment,
+          tags: recipe.tags,
+          cuisine: recipe.cuisine,
+          // Add back-reference to original in notes
+          notes: recipe.notes ? `${recipe.notes}\n\nCloned from: ${recipe.id}` : `Cloned from: ${recipe.id}`,
+          sourceUrls: recipe.sourceUrls || [],
+          collections: newCollections,
+          isPublic: false // Private copy
+        };
+
+        const createRecipeFn = httpsCallable(functions, 'createRecipe');
+        const result = await createRecipeFn(newRecipeData);
+        const { recipeId: newRecipeId, recipe: newRecipeObj } = result.data as any;
+
+        console.log('Cloned recipe created:', newRecipeId);
+
+        // Update local recipe store
+        addRecipe(newRecipeObj);
+
+        // Update the meal plan entry to point to the NEW recipe
+        updateMealPlan(selectedMealPlanForEdit.id, {
+          recipeId: newRecipeId,
+          // recipeTitle stays same
+        });
+
+        // Update selection state to point to new recipe (so subsequent edits work)
+        setSelectedMealPlanForEdit({
+          ...selectedMealPlanForEdit,
+          recipeId: newRecipeId
+        });
+
+        setToastMessage('Saved to your recipes');
+        setToastType('success');
+        setToastVisible(true);
+        return;
+      }
+
+      // --- EXISTING LOGIC FOR OWNED RECIPES ---
+
       // Toggle collection: add if not selected, remove if selected
       const updatedCollections = isSelected
         ? currentCollections.filter((col: string) => col !== collection)
         : [...currentCollections, collection];
-      
+
       // Update recipe's collections property via backend
       const updateRecipeFunction = httpsCallable(functions, 'updateRecipe');
       await updateRecipeFunction({
         recipeId: recipe.id,
         collections: updatedCollections.length > 0 ? updatedCollections : [],
       });
-      
+
       // Update local state
       updateRecipe(recipe.id, { collections: updatedCollections });
     } catch (error) {
       console.error('Error updating recipe collection:', error);
+      setToastMessage('Failed to update collection');
+      setToastType('error');
+      setToastVisible(true);
     }
   };
 
   const handleCreateCollection = async () => {
     if (!selectedMealPlanForEdit || !newCollectionName.trim()) return;
-    
+
     const recipe = allRecipes.find(r => r.id === selectedMealPlanForEdit.recipeId);
     if (!recipe) return;
-    
+
     const trimmedName = newCollectionName.trim();
-    
+
     try {
       // Add the new collection to user's collections
       await addCollection(trimmedName);
-      
+
+      // PROPOSED FIX: If user doesn't own recipe, CLONE it first
+      const currentUser = auth.currentUser;
+      if (!currentUser) return;
+
+      if (recipe.userId !== currentUser.uid) {
+        console.log('User does not own recipe, cloning for new collection...', recipe.id);
+
+        const newCollections = [trimmedName];
+
+        const newRecipeData = {
+          title: recipe.title,
+          description: recipe.description,
+          ingredients: recipe.ingredients,
+          steps: recipe.steps,
+          image: recipe.image,
+          servings: recipe.servings,
+          prepTime: recipe.prepTime,
+          cookTime: recipe.cookTime,
+          nutrition: recipe.nutrition,
+          equipment: recipe.equipment,
+          tags: recipe.tags,
+          cuisine: recipe.cuisine,
+          sourceUrls: recipe.sourceUrls ? [...recipe.sourceUrls, `Cloned from: ${recipe.id}`] : [`Cloned from: ${recipe.id}`],
+          collections: newCollections,
+          isPublic: false
+        };
+
+        const createRecipeFn = httpsCallable(functions, 'createRecipe');
+        const result = await createRecipeFn(newRecipeData);
+        const { recipeId: newRecipeId, recipe: newRecipeObj } = result.data as any;
+
+        // Update local recipe store
+        addRecipe(newRecipeObj);
+
+        // Update the meal plan entry
+        updateMealPlan(selectedMealPlanForEdit.id, {
+          recipeId: newRecipeId
+        });
+
+        // Update selection state
+        setSelectedMealPlanForEdit({
+          ...selectedMealPlanForEdit,
+          recipeId: newRecipeId
+        });
+
+        setToastMessage('Saved to your recipes');
+        setToastType('success');
+        setToastVisible(true);
+
+        // Reset form
+        setNewCollectionName('');
+        setShowCreateCollection(false);
+        return;
+      }
+
+      // --- EXISTING LOGIC FOR OWNED RECIPES ---
+
       // Support both old cookbook format and new collections array format
       const currentCollections = recipe.collections || (recipe.cookbook ? [recipe.cookbook] : []);
       const updatedCollections = [...currentCollections, trimmedName];
-      
+
       // Update recipe's collections property via backend
       const updateRecipeFunction = httpsCallable(functions, 'updateRecipe');
       await updateRecipeFunction({
         recipeId: recipe.id,
         collections: updatedCollections,
       });
-      
+
       // Update local state
       updateRecipe(recipe.id, { collections: updatedCollections });
-      
+
       // Reset form
       setNewCollectionName('');
       setShowCreateCollection(false);
     } catch (error) {
       console.error('Error creating collection:', error);
+      setToastMessage('Failed to create collection');
+      setToastType('error');
+      setToastVisible(true);
     }
   };
 
@@ -675,6 +802,21 @@ const MealPlanScreen: React.FC = () => {
     // Show date picker view in the bottom sheet
     setShowDatePickerInModal(true);
     setEditWeekOffset(0);
+  };
+
+  const handleAddSingleRecipeToGroceries = () => {
+    if (!selectedMealPlanForEdit) return;
+
+    setShowEditRecipeModal(false);
+    navigation.navigate('IngredientSelection', {
+      selectedMealPlans: [{
+        mealPlanId: selectedMealPlanForEdit.id,
+        recipeId: selectedMealPlanForEdit.recipeId,
+        recipeTitle: selectedMealPlanForEdit.recipeTitle,
+        date: selectedMealPlanForEdit.date,
+        mealType: selectedMealPlanForEdit.mealType,
+      }]
+    });
   };
 
   const handleDatePickerBack = () => {
@@ -702,21 +844,21 @@ const MealPlanScreen: React.FC = () => {
 
   const handleViewRecipeNotes = async () => {
     if (!selectedMealPlanForEdit) return;
-    
+
     const recipe = allRecipes.find(r => r.id === selectedMealPlanForEdit.recipeId);
     if (!recipe) return;
-    
+
     // Show notes view in the bottom sheet
     setShowRecipeNotesInModal(true);
     setRecipeNotesLoading(true);
-    
+
     // Load existing notes from Firestore
     try {
       const currentUser = auth.currentUser;
       if (currentUser) {
         const notesDocRef = doc(db, 'userRecipeNotes', `${currentUser.uid}_${recipe.id}`);
         const notesDoc = await getDoc(notesDocRef);
-        
+
         if (notesDoc.exists()) {
           setRecipeNotes(notesDoc.data().notes || '');
         } else {
@@ -739,17 +881,17 @@ const MealPlanScreen: React.FC = () => {
 
   const handleSaveRecipeNotes = async () => {
     if (!selectedMealPlanForEdit) return;
-    
+
     const recipe = allRecipes.find(r => r.id === selectedMealPlanForEdit.recipeId);
     if (!recipe) return;
-    
+
     try {
       const currentUser = auth.currentUser;
       if (!currentUser) {
         console.error('User not authenticated');
         return;
       }
-      
+
       // Save notes to Firestore
       const notesDocRef = doc(db, 'userRecipeNotes', `${currentUser.uid}_${recipe.id}`);
       await setDoc(notesDocRef, {
@@ -758,12 +900,12 @@ const MealPlanScreen: React.FC = () => {
         notes: recipeNotes.trim(),
         updatedAt: new Date().toISOString(),
       }, { merge: true });
-      
+
       // Show success toast
       setToastMessage('Notes saved');
       setToastType('success');
       setToastVisible(true);
-      
+
       // Navigate back to main menu (recipe options)
       setShowRecipeNotesInModal(false);
     } catch (error) {
@@ -778,17 +920,17 @@ const MealPlanScreen: React.FC = () => {
 
   const handleMarkAsCooked = async () => {
     if (!selectedMealPlanForEdit) return;
-    
+
     const recipe = allRecipes.find(r => r.id === selectedMealPlanForEdit.recipeId);
     if (!recipe) return;
-    
+
     try {
       const currentUser = auth.currentUser;
       if (!currentUser) {
         console.error('User not authenticated');
         return;
       }
-      
+
       // Save cooked status to Firestore
       const cookedDocRef = doc(db, 'userCookedRecipes', `${currentUser.uid}_${recipe.id}`);
       await setDoc(cookedDocRef, {
@@ -796,12 +938,12 @@ const MealPlanScreen: React.FC = () => {
         recipeId: recipe.id,
         cookedAt: new Date().toISOString(),
       }, { merge: true });
-      
+
       // Show success toast
       setToastMessage('Recipe marked as cooked');
       setToastType('success');
       setToastVisible(true);
-      
+
       // Remove from meal plan (marking as cooked)
       removeMealPlan(selectedMealPlanForEdit.id);
       setShowEditRecipeModal(false);
@@ -914,7 +1056,7 @@ const MealPlanScreen: React.FC = () => {
       )}
 
       {/* Meal Plan List */}
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -999,8 +1141,8 @@ const MealPlanScreen: React.FC = () => {
         <View style={styles.scheduledSection}>
           {/* Week Navigation - Moved to scheduled section header */}
           <View style={styles.weekNavigation}>
-            <TouchableOpacity 
-              style={styles.weekNavButton} 
+            <TouchableOpacity
+              style={styles.weekNavButton}
               onPress={handlePreviousWeek}
               activeOpacity={0.7}
             >
@@ -1015,8 +1157,8 @@ const MealPlanScreen: React.FC = () => {
                 <Text style={styles.dateRange}>{formatDate(weekStart)} - {formatDate(weekEnd)}</Text>
               </View>
             </View>
-            <TouchableOpacity 
-              style={styles.weekNavButton} 
+            <TouchableOpacity
+              style={styles.weekNavButton}
               onPress={handleNextWeek}
               activeOpacity={0.7}
             >
@@ -1156,7 +1298,7 @@ const MealPlanScreen: React.FC = () => {
               if (!date) {
                 return null;
               }
-              
+
               return (
                 <View style={[
                   styles.overflowMenu,
@@ -1207,9 +1349,9 @@ const MealPlanScreen: React.FC = () => {
               onPress={() => handleMealTypeSelect(mealType.id)}
               activeOpacity={0.7}
             >
-              <Ionicons 
-                name={mealType.icon as any} 
-                size={24} 
+              <Ionicons
+                name={mealType.icon as any}
+                size={24}
                 color="#1A1A1A"
                 style={{ marginRight: 16 }}
               />
@@ -1460,7 +1602,7 @@ const MealPlanScreen: React.FC = () => {
                     const dayName = date.toLocaleDateString('en-US', { weekday: 'short' }).substring(0, 3);
                     const dayNumber = date.getDate();
                     const isSelected = editSelectedDay === dayKey || selectedMealPlanForEdit.date === dayKey;
-                    
+
                     return (
                       <View key={dayKey} style={styles.editDayButtonContainer}>
                         <TouchableOpacity
@@ -1494,10 +1636,10 @@ const MealPlanScreen: React.FC = () => {
               <View style={styles.recipeOptionsHeader}>
                 <View style={styles.recipeOptionsImageContainer}>
                   {editDisplayImage ? (
-                    <Image 
-                      source={{ uri: editDisplayImage }} 
-                      style={styles.recipeOptionsImage} 
-                      resizeMode="cover" 
+                    <Image
+                      source={{ uri: editDisplayImage }}
+                      style={styles.recipeOptionsImage}
+                      resizeMode="cover"
                     />
                   ) : (
                     <View style={styles.recipeOptionsImagePlaceholder}>
@@ -1583,13 +1725,26 @@ const MealPlanScreen: React.FC = () => {
                   activeOpacity={0.7}
                 >
                   <View style={styles.recipeOptionIconContainer}>
-                    <Ionicons 
-                      name={isSavedToMyRecipes ? "heart" : "heart-outline"} 
-                      size={20} 
-                      color={isSavedToMyRecipes ? "#FF6B35" : "#1A1A1A"} 
+                    <Ionicons
+                      name={isSavedToMyRecipes ? "heart" : "heart-outline"}
+                      size={20}
+                      color={isSavedToMyRecipes ? "#FF6B35" : "#1A1A1A"}
                     />
                   </View>
                   <Text style={styles.recipeOptionText}>Saved to My Recipes</Text>
+                  <Ionicons name="chevron-forward" size={20} color="#999999" />
+                </TouchableOpacity>
+
+                {/* Add to groceries */}
+                <TouchableOpacity
+                  style={styles.recipeOptionItem}
+                  onPress={handleAddSingleRecipeToGroceries}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.recipeOptionIconContainer}>
+                    <Ionicons name="cart-outline" size={20} color="#1A1A1A" />
+                  </View>
+                  <Text style={styles.recipeOptionText}>Add to groceries</Text>
                   <Ionicons name="chevron-forward" size={20} color="#999999" />
                 </TouchableOpacity>
 
@@ -1633,7 +1788,7 @@ const MealPlanScreen: React.FC = () => {
         }}
         height="60%"
       >
-        <ScrollView 
+        <ScrollView
           style={styles.collectionsScrollView}
           contentContainerStyle={styles.collectionsContent}
           showsVerticalScrollIndicator={false}
@@ -1658,17 +1813,17 @@ const MealPlanScreen: React.FC = () => {
                 </View>
                 <View style={styles.collectionSelectionBackButton} />
               </View>
-              
+
               {/* Collection Options */}
               {collections.map((collection, index) => {
                 if (!selectedMealPlanForEdit) return null;
                 const recipe = allRecipes.find(r => r.id === selectedMealPlanForEdit.recipeId);
                 if (!recipe) return null;
-                
+
                 // Support both old cookbook format and new collections array format
                 const currentCollections = recipe.collections || (recipe.cookbook ? [recipe.cookbook] : []);
                 const isSelected = Array.isArray(currentCollections) && currentCollections.includes(collection);
-                
+
                 return (
                   <TouchableOpacity
                     key={index}
@@ -1698,7 +1853,7 @@ const MealPlanScreen: React.FC = () => {
                   </TouchableOpacity>
                 );
               })}
-              
+
               {/* Create New Collection */}
               <TouchableOpacity
                 style={styles.createCollectionButton}
@@ -1726,7 +1881,7 @@ const MealPlanScreen: React.FC = () => {
                 <Text style={styles.collectionCreateTitle}>Create Collection</Text>
                 <View style={styles.collectionCreateBackButton} />
               </View>
-              
+
               {/* Collection Name Input */}
               <TextInput
                 style={styles.collectionInput}
@@ -1736,7 +1891,7 @@ const MealPlanScreen: React.FC = () => {
                 onChangeText={setNewCollectionName}
                 autoFocus
               />
-              
+
               {/* Create Button */}
               <TouchableOpacity
                 style={[
@@ -2550,7 +2705,7 @@ const styles = StyleSheet.create({
     // backgroundColor: 'rgba(255, 235, 59, 0.4)',
     paddingVertical: 8,
     paddingHorizontal: 12,
-    borderRadius: 8, 
+    borderRadius: 8,
   },
   editRecipeImageContainer: {
     alignItems: 'center',
@@ -2662,7 +2817,7 @@ const styles = StyleSheet.create({
   editRecipeActions: {
     marginBottom: 24,
     gap: 0,
-    
+
   },
   editRecipeActionButton: {
     flexDirection: 'row',
