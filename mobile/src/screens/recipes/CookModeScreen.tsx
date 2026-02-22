@@ -813,7 +813,7 @@ const CookModeScreen: React.FC = () => {
           onClose={() => setShowFullRecipeBottomSheet(false)}
           height="100%"
         >
-          <View style={styles.fullRecipeContent}>
+          <View style={[styles.fullRecipeContent, { paddingTop: insets.top }]}>
             <View style={styles.fullRecipeHeader}>
               <Text style={styles.fullRecipeTitle}>Instructions</Text>
               <TouchableOpacity
@@ -1421,7 +1421,7 @@ const CookModeScreen: React.FC = () => {
         onClose={() => setShowFullRecipeBottomSheet(false)}
         height="100%"
       >
-        <View style={styles.fullRecipeContent}>
+        <View style={[styles.fullRecipeContent, { paddingTop: insets.top }]}>
           <View style={styles.fullRecipeHeader}>
             <Text style={styles.fullRecipeTitle}>Full Recipe</Text>
             <TouchableOpacity

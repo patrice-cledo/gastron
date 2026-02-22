@@ -327,21 +327,20 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
     navigation.navigate('RecipeDetail', { recipeId });
   };
 
-  // Get week dates based on offset
+  // Get week dates - must match MealPlanScreen exactly so saved dates show on planner
   const getWeekDates = (offset: number) => {
     const today = new Date();
-    const dayOfWeek = today.getDay();
-    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust to Monday
+    const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay; // days back to Monday
     const monday = new Date(today);
-    monday.setDate(today.getDate() + diff);
-
-    // Add week offset (7 days per week)
-    monday.setDate(monday.getDate() + (offset * 7));
+    monday.setDate(today.getDate() + mondayOffset + (offset * 7));
+    monday.setHours(0, 0, 0, 0);
 
     const week = [];
     for (let i = 0; i < 7; i++) {
       const date = new Date(monday);
       date.setDate(monday.getDate() + i);
+      date.setHours(0, 0, 0, 0);
       week.push(date);
     }
     return week;
@@ -413,10 +412,31 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
     setSelectedDay(dayKey);
   };
 
-  const handleAddToMenu = () => {
+  const handleAddToMenu = async () => {
     if (!selectedRecipeForMenu || !selectedMealType) return;
 
-    const recipeServings = selectedRecipeForMenu.servings || 4;
+    // Resolve servings from same sources as RecipeDetailScreen so card flow matches detail flow
+    let recipeServings: number;
+    const starter = starterRecipes.find(r => r.id === selectedRecipeForMenu.id);
+    if (starter) {
+      recipeServings = Math.max(1, Number(starter.servings) || 4);
+    } else if (selectedRecipeForMenu.id === sampleRecipe.id) {
+      recipeServings = Math.max(1, Number(sampleRecipe.servings) || 4);
+    } else {
+      try {
+        const recipeDoc = await getDoc(doc(db, 'recipes', selectedRecipeForMenu.id));
+        if (recipeDoc.exists() && recipeDoc.data()?.servings != null) {
+          recipeServings = Math.max(1, Number(recipeDoc.data()!.servings) || 4);
+        } else {
+          const latestRecipe = recipes.find(r => r.id === selectedRecipeForMenu.id) || selectedRecipeForMenu;
+          recipeServings = Math.max(1, Number(latestRecipe.servings) || 4);
+        }
+      } catch {
+        const latestRecipe = recipes.find(r => r.id === selectedRecipeForMenu.id) || selectedRecipeForMenu;
+        recipeServings = Math.max(1, Number(latestRecipe.servings) || 4);
+      }
+    }
+
     const newMealPlan: MealPlanItem = {
       id: `${Date.now()}-${Math.random()}`,
       recipeId: selectedRecipeForMenu.id,
@@ -432,7 +452,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
 
     // Automatically add ingredients to groceries list if includeInGrocery is true
     if (newMealPlan.includeInGrocery && selectedRecipeForMenu.ingredients && selectedRecipeForMenu.ingredients.length > 0) {
-      const targetServings = newMealPlan.servingsOverride || recipeServings;
+      const targetServings = recipeServings;
 
       // Adjust ingredients based on servings
       const adjustedIngredients = selectedRecipeForMenu.ingredients.map(ing => ({
@@ -448,7 +468,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
         amount: ing.amount,
       }));
 
-      addItems(adjustedIngredients, selectedRecipeForMenu.id, selectedRecipeForMenu.title, targetServings, sources);
+      addItems(adjustedIngredients, selectedRecipeForMenu.id, selectedRecipeForMenu.title, recipeServings, sources);
       console.log('🛒 Added ingredients to groceries list:', adjustedIngredients.length);
     }
 
@@ -1235,7 +1255,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
         </View>
       </BottomSheet>
 
-      {/* Add to This Week's Menu Modal */}
+      {/* Add to planner - same layout and styles as RecipeDetailScreen */}
       <BottomSheet
         visible={showAddToMenuModal}
         onClose={() => {
@@ -1246,26 +1266,24 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
           setShowRecipeOptionsBottomSheet(false);
           setSelectedRecipeForOptions(null);
         }}
+        height="85%"
       >
         {selectedRecipeForMenu && (
           <View style={styles.addToMenuModalContent}>
-            {/* Header with Close Button */}
-            <View style={styles.addToMenuHeader}>
-              <Text style={styles.addToMenuHeaderTitle}>Add to planner</Text>
-              <TouchableOpacity
-                style={styles.addToMenuCloseButton}
-                onPress={() => {
-                  setShowAddToMenuModal(false);
-                  setSelectedRecipeForMenu(null);
-                  setSelectedDay(null);
-                  setSelectedMealType(null);
-                  setShowRecipeOptionsBottomSheet(false);
-                  setSelectedRecipeForOptions(null);
-                }}
-              >
-                <Ionicons name="close" size={24} color="#1A1A1A" />
-              </TouchableOpacity>
-            </View>
+            {/* Close Button - same as RecipeDetailScreen */}
+            <TouchableOpacity
+              style={styles.addToMenuCloseButton}
+              onPress={() => {
+                setShowAddToMenuModal(false);
+                setSelectedRecipeForMenu(null);
+                setSelectedDay(null);
+                setSelectedMealType(null);
+                setShowRecipeOptionsBottomSheet(false);
+                setSelectedRecipeForOptions(null);
+              }}
+            >
+              <Ionicons name="close" size={20} color="#1A1A1A" />
+            </TouchableOpacity>
 
             {/* Recipe Image */}
             <View style={styles.addToMenuImageContainer}>
@@ -1285,12 +1303,12 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
                 )
               ) : (
                 <View style={styles.addToMenuImagePlaceholder}>
-                  <Text style={styles.addToMenuPlaceholderText}>📄</Text>
+                  <Ionicons name="restaurant" size={40} color="#CCCCCC" />
                 </View>
               )}
             </View>
 
-            {/* Recipe Title with Yellow Highlight */}
+            {/* Recipe Title with highlight - same as RecipeDetailScreen */}
             <View style={styles.addToMenuTitleContainer}>
               <Text style={styles.addToMenuTitle}>{selectedRecipeForMenu.title}</Text>
             </View>
@@ -1416,7 +1434,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
         )}
       </BottomSheet>
 
-      {/* Recipe Options Bottom Sheet */}
+      {/* Recipe Options Bottom Sheet - same order and behavior as RecipeDetailScreen */}
       <BottomSheet
         visible={showRecipeOptionsBottomSheet}
         onClose={() => {
@@ -1424,7 +1442,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
           setSelectedRecipeForOptions(null);
           setShowMealTypeSelection(false);
         }}
-        height="50%"
+        height="55%"
       >
         {selectedRecipeForOptions && (
           <View style={styles.recipeOptionsContent}>
@@ -1473,16 +1491,36 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
                   </TouchableOpacity>
                 </View>
 
-                {/* Options List */}
+                {/* Options List - same order and behavior as RecipeDetailScreen */}
                 <View style={styles.recipeOptionsList}>
                   <TouchableOpacity
                     style={styles.recipeOptionItem}
-                    onPress={() => {
-                      setShowMealTypeSelection(true);
-                    }}
+                    onPress={() => setShowMealTypeSelection(true)}
                   >
                     <Ionicons name="checkmark-circle-outline" size={24} color="#1A1A1A" />
                     <Text style={styles.recipeOptionText}>I'll cook this today</Text>
+                    <Ionicons name="chevron-forward" size={20} color="#999999" />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.recipeOptionItem}
+                    onPress={() => {
+                      if (selectedRecipeForOptions) {
+                        setShowRecipeOptionsBottomSheet(false);
+                        (navigation as any).navigate('IngredientSelection', {
+                          selectedMealPlans: [{
+                            mealPlanId: `temp-${Date.now()}`,
+                            recipeId: selectedRecipeForOptions.id,
+                            recipeTitle: selectedRecipeForOptions.title,
+                            date: formatDateKey(new Date()),
+                            mealType: 'dinner',
+                          }],
+                        });
+                      }
+                    }}
+                  >
+                    <Ionicons name="cart-outline" size={24} color="#1A1A1A" />
+                    <Text style={styles.recipeOptionText}>Add to groceries</Text>
                     <Ionicons name="chevron-forward" size={20} color="#999999" />
                   </TouchableOpacity>
 
@@ -1568,14 +1606,34 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
                   <View style={styles.mealTypeBackButton} />
                 </View>
 
-                {/* Meal Type Options */}
+                {/* Meal Type Options - same behavior as RecipeDetailScreen */}
                 <View style={styles.mealTypeList}>
                   {['breakfast', 'lunch', 'dinner', 'snack'].map((mealType) => (
                     <TouchableOpacity
                       key={mealType}
                       style={styles.mealTypeItem}
-                      onPress={() => {
-                        const today = getTodayDate();
+                      onPress={async () => {
+                        const today = formatDateKey(new Date());
+                        let recipeServings: number;
+                        const starter = starterRecipes.find(r => r.id === selectedRecipeForOptions.id);
+                        if (starter) {
+                          recipeServings = Math.max(1, Number(starter.servings) || 4);
+                        } else if (selectedRecipeForOptions.id === sampleRecipe.id) {
+                          recipeServings = Math.max(1, Number(sampleRecipe.servings) || 4);
+                        } else {
+                          try {
+                            const recipeDoc = await getDoc(doc(db, 'recipes', selectedRecipeForOptions.id));
+                            if (recipeDoc.exists() && recipeDoc.data()?.servings != null) {
+                              recipeServings = Math.max(1, Number(recipeDoc.data()!.servings) || 4);
+                            } else {
+                              const latestRecipe = recipes.find(r => r.id === selectedRecipeForOptions.id) || selectedRecipeForOptions;
+                              recipeServings = Math.max(1, Number(latestRecipe.servings) || 4);
+                            }
+                          } catch {
+                            const latestRecipe = recipes.find(r => r.id === selectedRecipeForOptions.id) || selectedRecipeForOptions;
+                            recipeServings = Math.max(1, Number(latestRecipe.servings) || 4);
+                          }
+                        }
                         const newMealPlan: MealPlanItem = {
                           id: `meal-${Date.now()}`,
                           recipeId: selectedRecipeForOptions.id,
@@ -1586,14 +1644,14 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
                           mealType: mealType as 'breakfast' | 'lunch' | 'dinner' | 'snack',
                           date: today,
                           includeInGrocery: true,
+                          servingsOverride: recipeServings,
                         };
 
                         addMealPlan(newMealPlan);
 
                         // Automatically add ingredients to groceries list if includeInGrocery is true
                         if (newMealPlan.includeInGrocery && selectedRecipeForOptions.ingredients && selectedRecipeForOptions.ingredients.length > 0) {
-                          const recipeServings = selectedRecipeForOptions.servings || 4;
-                          const targetServings = newMealPlan.servingsOverride || recipeServings;
+                          const targetServings = recipeServings;
 
                           // Adjust ingredients based on servings
                           const adjustedIngredients = selectedRecipeForOptions.ingredients.map(ing => ({
@@ -4210,38 +4268,33 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
   },
-  // Add to Menu Modal Styles
+  // Add to Menu Modal Styles - match RecipeDetailScreen Add to planner sheet
   addToMenuModalContent: {
-    paddingBottom: 20,
-  },
-  addToMenuHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  addToMenuHeaderTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1A1A',
+    padding: 20,
+    paddingTop: 0,
+    position: 'relative',
   },
   addToMenuCloseButton: {
-    width: 40,
-    height: 40,
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#CEEC2C',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 10,
   },
   addToMenuImageContainer: {
     width: 120,
     height: 120,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#F5F5F0',
-    marginBottom: 16,
     alignSelf: 'center',
+    marginTop: 20,
+    marginBottom: 16,
+    backgroundColor: '#F5F5F5',
   },
   addToMenuImage: {
     width: '100%',
@@ -4250,63 +4303,59 @@ const styles = StyleSheet.create({
   addToMenuImagePlaceholder: {
     width: '100%',
     height: '100%',
-    alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F5F5F0',
-  },
-  addToMenuPlaceholderText: {
-    fontSize: 48,
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
   },
   addToMenuTitleContainer: {
-    marginBottom: 20,
-  },
-  addToMenuTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    backgroundColor: 'rgba(255, 235, 59, 0.4)',
+    backgroundColor: '#CEEC2C',
     paddingVertical: 8,
     paddingHorizontal: 12,
+    borderRadius: 8,
+    marginBottom: 20,
     alignSelf: 'center',
-    borderRadius: 4,
+  },
+  addToMenuTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A1A',
     textAlign: 'center',
   },
   thisWeekSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     marginBottom: 8,
-    gap: 12,
   },
   weekNavButton: {
-    padding: 4,
+    padding: 8,
   },
   weekNavButtonDisabled: {
-    opacity: 0.5,
+    opacity: 0.3,
   },
   thisWeekContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   thisWeekText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#1A1A1A',
   },
   dateRangeText: {
     fontSize: 14,
     fontWeight: '400',
-    color: '#666666',
+    color: '#666',
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   addToMenuQuestion: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '400',
     color: '#1A1A1A',
+    marginBottom: 16,
     textAlign: 'center',
-    marginBottom: 20,
   },
   mealTypeQuestion: {
     fontSize: 16,
@@ -4348,43 +4397,38 @@ const styles = StyleSheet.create({
   daySelectionContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 32,
+    marginBottom: 24,
     gap: 4,
   },
   dayButton: {
-    flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 2,
-    borderRadius: 12,
-    backgroundColor: '#F5F5F0',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#E5E5E5',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
   },
   dayButtonSelected: {
     backgroundColor: '#CEEC2C',
-    borderColor: '#CEEC2C',
   },
   dayButtonText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#666666',
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#666',
   },
   dayButtonTextSelected: {
+    fontWeight: '400',
     color: '#1A1A1A',
-    fontWeight: '600',
   },
   addToMenuSubmitButton: {
     backgroundColor: '#CEEC2C',
     paddingVertical: 16,
-    borderRadius: 16,
+    borderRadius: 12,
     alignItems: 'center',
-    justifyContent: 'center',
+    marginTop: 8,
   },
   addToMenuSubmitButtonDisabled: {
-    backgroundColor: '#E0E0E0',
-    opacity: 0.6,
+    backgroundColor: '#CCCCCC',
   },
   addToMenuSubmitButtonText: {
     fontSize: 16,

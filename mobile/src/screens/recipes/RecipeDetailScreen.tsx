@@ -2337,16 +2337,15 @@ const RecipeDetailScreen: React.FC = () => {
                     style={styles.recipeOptionItem}
                     onPress={() => {
                       setShowRecipeOptionsBottomSheet(false);
-                      // Navigate to IngredientSelection with a constructed meal plan item
-                      // We use a temporary ID since it's not actually in the meal plan yet
+                      const today = new Date();
                       navigation.navigate('IngredientSelection', {
                         selectedMealPlans: [{
                           mealPlanId: `temp-${Date.now()}`,
                           recipeId: recipe.id,
                           recipeTitle: recipe.title,
-                          date: new Date().toISOString().split('T')[0], // Today's date as default
-                          mealType: 'dinner', // Default callback
-                        }]
+                          date: formatDateKey(today),
+                          mealType: 'dinner',
+                        }],
                       });
                     }}
                   >

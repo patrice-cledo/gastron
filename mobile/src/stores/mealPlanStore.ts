@@ -49,10 +49,11 @@ export const useMealPlanStore = create<MealPlanState>()(
           mealPlans: [...state.mealPlans, mealPlanWithDefaults],
         }));
         
-        // Sync to Firebase (fire and forget)
+        // Sync to Firebase, then refresh from Firebase so Meal Plan tab shows the new entry
         if (auth.currentUser) {
           try {
             await saveMealPlanToFirebase(mealPlanWithDefaults);
+            get().syncFromFirebase();
           } catch (error) {
             console.error('Error syncing meal plan to Firebase:', error);
           }

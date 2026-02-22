@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, TouchableWithoutFeedback, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, TouchableWithoutFeedback, TextInput, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +20,7 @@ import { RootStackParamList, TabParamList } from '../../types/navigation';
 import { useCallback } from 'react';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { ref, getDownloadURL } from 'firebase/storage';
+import { onAuthStateChanged } from 'firebase/auth';
 import { storage, auth, functions, db } from '../../services/firebase';
 import { httpsCallable } from 'firebase/functions';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -64,6 +65,7 @@ const MealPlanScreen: React.FC = () => {
   const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('success');
   const overflowButtonRefs = useRef<{ [key: string]: React.ElementRef<typeof TouchableOpacity> | null }>({});
   const [mealPlanImageUrls, setMealPlanImageUrls] = useState<{ [mealPlanId: string]: string }>({});
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Helper to check if a string is a storage path (not a URL)
   const isStoragePath = (image: string): boolean => {
@@ -116,13 +118,10 @@ const MealPlanScreen: React.FC = () => {
       if (auth.currentUser) {
         try {
           await syncFromFirebase();
-          // Enrich with recipe data
-          // Get unique recipes by ID (starter recipes + recipes from store)
           const recipeMap = new Map<string, Recipe>();
           starterRecipes.forEach(recipe => recipeMap.set(recipe.id, recipe));
           recipes.forEach(recipe => recipeMap.set(recipe.id, recipe));
-          const allRecipesForEnrichment = Array.from(recipeMap.values());
-          enrichMealPlansWithRecipes(allRecipesForEnrichment);
+          enrichMealPlansWithRecipes(Array.from(recipeMap.values()));
         } catch (error) {
           console.error('Error loading meal plans from Firebase:', error);
         }
@@ -130,7 +129,39 @@ const MealPlanScreen: React.FC = () => {
     };
 
     loadMealPlans();
-  }, []); // Only run once on mount
+    // Retry sync after a short delay in case auth wasn't ready on first run (so existing plans show)
+    const retryTimer = setTimeout(() => {
+      if (auth.currentUser) syncFromFirebase();
+    }, 800);
+    return () => clearTimeout(retryTimer);
+  }, []);
+
+  // Sync when auth becomes available (e.g. after app load / restore)
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) syncFromFirebase();
+    });
+    return () => unsubscribe();
+  }, [syncFromFirebase]);
+
+  const handleRefresh = useCallback(async () => {
+    if (!auth.currentUser) {
+      setIsRefreshing(false);
+      return;
+    }
+    setIsRefreshing(true);
+    try {
+      await syncFromFirebase();
+      const recipeMap = new Map<string, Recipe>();
+      starterRecipes.forEach(recipe => recipeMap.set(recipe.id, recipe));
+      recipes.forEach(recipe => recipeMap.set(recipe.id, recipe));
+      enrichMealPlansWithRecipes(Array.from(recipeMap.values()));
+    } catch (error) {
+      console.error('Error refreshing meal plans:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [syncFromFirebase, enrichMealPlansWithRecipes, recipes]);
 
   // Enrich meal plans with recipe data when recipes change
   useEffect(() => {
@@ -301,6 +332,13 @@ const MealPlanScreen: React.FC = () => {
     return mealPlans.filter(plan => !plan.date || plan.date === '' || plan.date === 'unscheduled');
   };
 
+  // Prefer saved servingsOverride when valid (>= 1), so meal plan shows what was set when added
+  const getDisplayServings = (plan: MealPlanItem, recipe?: Recipe | null): number => {
+    const override = plan.servingsOverride;
+    if (override != null && !isNaN(Number(override)) && Number(override) >= 1) return Number(override);
+    return recipe?.servings ?? 4;
+  };
+
   const handleAddMeal = (dayKey: string, date: Date) => {
     setSelectedDay(dayKey);
     setShowMealTypeModal(true);
@@ -456,7 +494,7 @@ const MealPlanScreen: React.FC = () => {
     const recipe = allRecipes.find((r) => r.id === plan.recipeId);
     if (!recipe) return;
 
-    const currentServings = plan.servingsOverride || recipe.servings || 4;
+    const currentServings = getDisplayServings(plan, recipe);
     const newServings = Math.max(1, currentServings + delta);
 
     updateMealPlan(planId, { servingsOverride: newServings });
@@ -474,7 +512,7 @@ const MealPlanScreen: React.FC = () => {
 
     if (newIncludeInGrocery) {
       // Add items to grocery list
-      const servings = plan.servingsOverride || recipe.servings || 4;
+      const servings = getDisplayServings(plan, recipe);
       const baseServings = recipe.servings || 4;
       const adjustedIngredients = recipe.ingredients.map((ing) => ({
         ...ing,
@@ -967,7 +1005,7 @@ const MealPlanScreen: React.FC = () => {
     if (!selectedMealPlanForEdit) return;
 
     const recipe = allRecipes.find(r => r.id === selectedMealPlanForEdit.recipeId);
-    const currentServings = selectedMealPlanForEdit.servingsOverride || recipe?.servings || 4;
+    const currentServings = getDisplayServings(selectedMealPlanForEdit, recipe);
     const newServings = Math.max(1, currentServings + delta);
 
     updateMealPlan(selectedMealPlanForEdit.id, { servingsOverride: newServings });
@@ -1064,6 +1102,14 @@ const MealPlanScreen: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor="#1A1A1A"
+            colors={['#1A1A1A']}
+          />
+        }
       >
         {/* Shelf Section - Recipes without dates */}
         {(() => {
@@ -1073,7 +1119,7 @@ const MealPlanScreen: React.FC = () => {
               <View style={styles.shelfSection}>
                 {shelfPlans.map((plan) => {
                   const recipe = allRecipes.find(r => r.id === plan.recipeId);
-                  const servings = plan.servingsOverride || recipe?.servings || 4;
+                  const servings = getDisplayServings(plan, recipe);
                   const totalTime = (recipe?.prepTime || 0) + (recipe?.cookTime || 0);
                   const rating = (recipe as any)?.rating || '4.0';
                   const displayImage = mealPlanImageUrls[plan.id] || plan.recipeImage;
@@ -1208,7 +1254,7 @@ const MealPlanScreen: React.FC = () => {
                   {hasPlans ? (
                     dayMealPlans.map((plan) => {
                       const recipe = allRecipes.find(r => r.id === plan.recipeId);
-                      const servings = plan.servingsOverride || recipe?.servings || 4;
+                      const servings = getDisplayServings(plan, recipe);
                       const totalTime = (recipe?.prepTime || 0) + (recipe?.cookTime || 0);
                       const rating = (recipe as any)?.rating || '4.0';
                       const displayImage = mealPlanImageUrls[plan.id] || plan.recipeImage;

@@ -81,9 +81,10 @@ export const saveMealPlanToFirebase = async (mealPlan: MealPlanItem): Promise<vo
     const weekStart = getWeekStart(mealPlan.date);
     const planId = await getOrCreateMealPlan(weekStart, currentUser.uid);
     
-    // Save or update the entry
+    // Save or update the entry (include userId so we can load by user even if plan doc is missing)
     const entryRef = doc(db, COLLECTIONS.mealPlanEntries, mealPlan.id);
     await setDoc(entryRef, {
+      userId: currentUser.uid,
       planId,
       date: mealPlan.date,
       mealType: mealPlan.mealType,
@@ -162,7 +163,36 @@ export const deleteMealPlanFromFirebase = async (mealPlanId: string): Promise<vo
 };
 
 /**
- * Load all meal plans from Firebase for the current user
+ * Normalize date to YYYY-MM-DD string (Firestore may return Timestamp)
+ */
+const toDateString = (val: unknown): string => {
+  if (typeof val === 'string') return val;
+  if (val && typeof val === 'object' && 'toDate' in val && typeof (val as { toDate: () => Date }).toDate === 'function') {
+    const d = (val as { toDate: () => Date }).toDate();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+  return '';
+};
+
+const entryToMealPlanItem = (entry: any): MealPlanItem => {
+  const servingsOverride = entry.servingsOverride != null && entry.servingsOverride !== ''
+    ? Number(entry.servingsOverride)
+    : undefined;
+  return {
+    id: entry.id,
+    recipeId: entry.recipeId,
+    recipeTitle: entry.recipeTitle || '',
+    recipeImage: entry.recipeImage || undefined,
+    mealType: entry.mealType,
+    date: toDateString(entry.date),
+    servingsOverride: servingsOverride != null && !isNaN(servingsOverride) && servingsOverride >= 1 ? servingsOverride : undefined,
+    includeInGrocery: entry.includeInGrocery !== undefined ? entry.includeInGrocery : true,
+  };
+};
+
+/**
+ * Load all meal plans from Firebase for the current user.
+ * Tries (1) entries by userId, then (2) plans by userId + entries by planId, so existing data shows even if plan docs lack userId.
  */
 export const loadMealPlansFromFirebase = async (): Promise<MealPlanItem[]> => {
   const currentUser = auth.currentUser;
@@ -172,21 +202,27 @@ export const loadMealPlansFromFirebase = async (): Promise<MealPlanItem[]> => {
   }
 
   try {
-    // Get all meal plans for this user
+    const entriesRef = collection(db, COLLECTIONS.mealPlanEntries);
+
+    // 1) Load entries that have userId (new or backfilled) - works even when plan docs are missing
+    const byUserQuery = query(entriesRef, where('userId', '==', currentUser.uid));
+    const byUserSnapshot = await getDocs(byUserQuery);
+    if (!byUserSnapshot.empty) {
+      const items = byUserSnapshot.docs.map(doc => entryToMealPlanItem({ id: doc.id, ...doc.data() }));
+      console.log(`✅ Loaded ${items.length} meal plans from Firebase (by userId)`);
+      return items;
+    }
+
+    // 2) Fallback: load via meal plan docs (for entries saved before we added userId)
     const mealPlansRef = collection(db, COLLECTIONS.mealPlans);
     const plansQuery = query(mealPlansRef, where('userId', '==', currentUser.uid));
     const plansSnapshot = await getDocs(plansQuery);
-    
     if (plansSnapshot.empty) {
       console.log('📋 No meal plans found in Firebase');
       return [];
     }
-    
-    // Get all entries for these plans
-    const planIds = plansSnapshot.docs.map(doc => doc.id);
-    const entriesRef = collection(db, COLLECTIONS.mealPlanEntries);
-    
-    // Firestore has a limit of 10 items in an 'in' query, so we need to batch
+
+    const planIds = plansSnapshot.docs.map(d => d.id);
     const allEntries: any[] = [];
     for (let i = 0; i < planIds.length; i += 10) {
       const batch = planIds.slice(i, i + 10);
@@ -194,20 +230,24 @@ export const loadMealPlansFromFirebase = async (): Promise<MealPlanItem[]> => {
       const entriesSnapshot = await getDocs(entriesQuery);
       allEntries.push(...entriesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }
-    
-    // Convert to MealPlanItem format
-    const mealPlanItems: MealPlanItem[] = allEntries.map(entry => ({
-      id: entry.id,
-      recipeId: entry.recipeId,
-      recipeTitle: entry.recipeTitle || '', // Stored in Firebase, will be enriched from recipe store if missing
-      recipeImage: entry.recipeImage || undefined,
-      mealType: entry.mealType,
-      date: entry.date,
-      servingsOverride: entry.servingsOverride || undefined,
-      includeInGrocery: entry.includeInGrocery !== undefined ? entry.includeInGrocery : true,
-    }));
-    
-    console.log(`✅ Loaded ${mealPlanItems.length} meal plans from Firebase`);
+
+    // Backfill userId on entries that don't have it (so next load uses the fast "by userId" path)
+    const needsBackfill = allEntries.filter((e: any) => !e.userId || e.userId !== currentUser.uid);
+    if (needsBackfill.length > 0) {
+      try {
+        const backfillBatch = writeBatch(db);
+        for (const entry of needsBackfill) {
+          backfillBatch.set(doc(db, COLLECTIONS.mealPlanEntries, entry.id), { userId: currentUser.uid }, { merge: true });
+        }
+        await backfillBatch.commit();
+        console.log(`✅ Backfilled userId on ${needsBackfill.length} meal plan entries`);
+      } catch (err) {
+        console.warn('Backfill userId failed (non-fatal):', err);
+      }
+    }
+
+    const mealPlanItems = allEntries.map(entry => entryToMealPlanItem(entry));
+    console.log(`✅ Loaded ${mealPlanItems.length} meal plans from Firebase (by planId)`);
     return mealPlanItems;
   } catch (error) {
     console.error('❌ Error loading meal plans from Firebase:', error);
@@ -259,6 +299,7 @@ export const batchSaveMealPlansToFirebase = async (mealPlans: MealPlanItem[]): P
       
       const entryRef = doc(db, COLLECTIONS.mealPlanEntries, mealPlan.id);
       batch.set(entryRef, {
+        userId: currentUser.uid,
         planId,
         date: mealPlan.date,
         mealType: mealPlan.mealType,
