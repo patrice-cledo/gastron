@@ -49,9 +49,9 @@ const RateAndReviewScreen: React.FC = () => {
   useEffect(() => {
     // Pre-fill name from auth (displayName or email as fallback)
     if (auth.currentUser) {
-      const name = auth.currentUser.displayName || 
-                   auth.currentUser.email?.split('@')[0] || 
-                   '';
+      const name = auth.currentUser.displayName ||
+        auth.currentUser.email?.split('@')[0] ||
+        '';
       if (name) {
         setUserName(name);
       }
@@ -63,14 +63,14 @@ const RateAndReviewScreen: React.FC = () => {
         const getReviewFunction = httpsCallable(functions, 'getReview');
         const result = await getReviewFunction({ recipeId });
         const data = result.data as { review: any | null };
-        
+
         if (data.review) {
           setRating(data.review.rating);
           setComments(data.review.comments || '');
           setReviewImage(data.review.imageUrl || null);
           setUserName(data.review.userName || auth.currentUser?.displayName || '');
           setExistingReviewId(data.review.id);
-          
+
           // Don't auto-show review form - let user start on rating page to see image
           // User can click "LEAVE A REVIEW" to see/edit their review
         }
@@ -96,7 +96,7 @@ const RateAndReviewScreen: React.FC = () => {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaType.Images,
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.8,
@@ -146,12 +146,12 @@ const RateAndReviewScreen: React.FC = () => {
         comments: comments.trim() || undefined,
         userName: userName.trim() || undefined,
       };
-      
+
       // Only add imageUrl if it's a valid string
       if (imageUrl && typeof imageUrl === 'string') {
         requestData.imageUrl = imageUrl;
       }
-      
+
       const result = await submitReviewFunction(requestData);
 
       console.log('Review submitted successfully:', result.data);

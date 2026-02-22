@@ -2,8 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { SvgUri } from 'react-native-svg';
 import { useIconMappingsStore } from '../hooks/useIconMappings';
-import { SpriteSheetIcon } from './SpriteSheetIcon';
-import { getIngredientSpriteCode } from '../utils/ingredientMapping';
+
 
 export type IngredientType =
   | 'whole' // shrimp, mushrooms, olives, etc.
@@ -22,6 +21,19 @@ interface IngredientIconProps {
   showLabel?: boolean;
 }
 
+
+const getEmojiFallback = (ingredientName: string) => {
+  const name = ingredientName.toLowerCase();
+  if (name.includes('rice')) return '🌾';
+  if (name.includes('coconut') || name.includes('milk')) return '🥥';
+  if (name.includes('onion')) return '🧅';
+  if (name.includes('carrot')) return '🥕';
+  if (name.includes('scallion') || name.includes('spring onion')) return '🌱';
+  if (name.includes('pork') || name.includes('meat')) return '🥩';
+  if (name.includes('spice') || name.includes('seasoning')) return '🌶️';
+  if (name.includes('oil')) return '🫒';
+  return '📦';
+};
 
 // ... (existing imports and types)
 
@@ -48,7 +60,12 @@ export const IngredientIcon: React.FC<IngredientIconProps> = ({
   };
 
   const iconSize = getSizeValue();
-  const spriteCode = getIngredientSpriteCode(name);
+
+  const renderFallback = (fallbackSize: number, isChecked: boolean) => (
+    <View style={{ width: fallbackSize, height: fallbackSize, justifyContent: 'center', alignItems: 'center', opacity: isChecked ? 0.5 : 1 }}>
+      <Text style={{ fontSize: fallbackSize * 0.7 }}>{getEmojiFallback(name)}</Text>
+    </View>
+  );
 
   const formatLabel = () => {
     // ... (existing label logic)
@@ -74,7 +91,7 @@ export const IngredientIcon: React.FC<IngredientIconProps> = ({
         return <SvgUri width={iconSize} height={iconSize} uri={uri} />;
       }
     }
-    return <SpriteSheetIcon spriteCode={spriteCode} size={iconSize} checked={checked} />;
+    return renderFallback(iconSize, checked);
   };
 
   if (type === 'scatter') {
@@ -101,7 +118,7 @@ export const IngredientIcon: React.FC<IngredientIconProps> = ({
                 return null;
               })()
             ) : (
-              <SpriteSheetIcon spriteCode={spriteCode} size={iconSize - 8} checked={false} />
+              renderFallback(iconSize - 8, false)
             )}
 
           </View>
@@ -134,7 +151,7 @@ export const IngredientIcon: React.FC<IngredientIconProps> = ({
               return null;
             })()
           ) : (
-            <SpriteSheetIcon spriteCode={spriteCode} size={iconSize} checked={false} />
+            renderFallback(iconSize, false)
           )}
           <View style={styles.wavePattern} />
           {checked && (
@@ -165,10 +182,10 @@ export const IngredientIcon: React.FC<IngredientIconProps> = ({
               const uri = `https://api.iconify.design/${prefix}/${iconName}.svg?color=%231A1A1A`;
               return <SvgUri width={iconSize} height={iconSize} uri={uri} />;
             }
-            return <SpriteSheetIcon spriteCode={spriteCode} size={iconSize} checked={checked} />;
+            return renderFallback(iconSize, checked);
           })()
         ) : (
-          <SpriteSheetIcon spriteCode={spriteCode} size={iconSize} checked={checked} />
+          renderFallback(iconSize, checked)
         )}
       </TouchableOpacity>
       {label && <Text style={styles.ingredientLabel}>{label}</Text>}

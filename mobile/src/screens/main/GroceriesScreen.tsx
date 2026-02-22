@@ -25,7 +25,8 @@ import { RootStackParamList } from '../../types/navigation';
 import { useGroceriesStore } from '../../stores/groceriesStore';
 import { useMealPlanStore } from '../../stores/mealPlanStore';
 import { GroceryItem } from '../../types/grocery';
-import { SpriteSheetIcon } from '../../components/SpriteSheetIcon';
+import { IngredientIcon } from '../../components/IngredientIcon';
+import { formatFraction } from '../../utils/formatters';
 import { getIngredientSpriteCode } from '../../utils/ingredientMapping';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Clipboard from 'expo-clipboard';
@@ -57,7 +58,7 @@ const GroceriesScreen: React.FC = () => {
     toggleItemPinned,
     mergeItems,
   } = useGroceriesStore();
-  
+
   const { mealPlans } = useMealPlanStore();
 
   const [showOverflowMenu, setShowOverflowMenu] = useState(false);
@@ -73,7 +74,7 @@ const GroceriesScreen: React.FC = () => {
   const [mergeSuggestions, setMergeSuggestions] = useState<Array<{ items: GroceryItem[]; suggestedName: string; totalAmount: string }>>([]);
   const [showMergeModal, setShowMergeModal] = useState(false);
   const [pendingMerge, setPendingMerge] = useState<{ items: GroceryItem[]; suggestedName: string; totalAmount: string; unit?: string } | null>(null);
-  
+
   // New state for simplified shopping list
   const [selectedRecipeIds, setSelectedRecipeIds] = useState<Set<string>>(new Set());
   const [recipesCollapsed, setRecipesCollapsed] = useState(false);
@@ -82,12 +83,12 @@ const GroceriesScreen: React.FC = () => {
 
   // Helper to check if a string is a storage path (not a URL)
   const isStoragePath = (image: string): boolean => {
-    return typeof image === 'string' && 
-           !image.startsWith('http://') && 
-           !image.startsWith('https://') &&
-           !image.startsWith('file://') &&
-           !image.startsWith('content://') &&
-           image.includes('/');
+    return typeof image === 'string' &&
+      !image.startsWith('http://') &&
+      !image.startsWith('https://') &&
+      !image.startsWith('file://') &&
+      !image.startsWith('content://') &&
+      image.includes('/');
   };
 
   // Convert storage path to download URL for recipe images
@@ -226,9 +227,9 @@ const GroceriesScreen: React.FC = () => {
       selectedRecipeIdsCount: selectedRecipeIds.size,
       recipesCount: recipes.length,
     });
-    
+
     let filtered = items;
-    
+
     // Filter by scope (date range)
     if (scopeStartDate && scopeEndDate) {
       // Get meal plan IDs within scope that have includeInGrocery = true
@@ -237,25 +238,25 @@ const GroceriesScreen: React.FC = () => {
           .filter((plan) => isDateInScope(plan.date) && plan.includeInGrocery)
           .map((plan) => plan.id)
       );
-      
+
       // Get meal plan IDs OUTSIDE scope (to exclude items from those)
       const mealPlanIdsOutsideScope = new Set(
         mealPlans
           .filter((plan) => !isDateInScope(plan.date) || !plan.includeInGrocery)
           .map((plan) => plan.id)
       );
-      
+
       // If meal plans exist, filter by scope
       if (mealPlans.length > 0) {
         filtered = filtered.filter((item) => {
           // Always include pinned/manual items
           if (item.pinned) return true;
-          
+
           // If item has no sources and no recipeId, include it (manual item)
           if ((!item.sources || item.sources.length === 0) && !item.recipeId) {
             return true;
           }
-          
+
           // Check if item has sources with mealPlanEntryId
           if (item.sources && item.sources.length > 0) {
             // Check if any source's mealPlanEntryId should be excluded
@@ -273,16 +274,16 @@ const GroceriesScreen: React.FC = () => {
             if (shouldExclude) {
               return false;
             }
-            
+
             // If mealPlanEntryId is in scope, include it
-            const hasMealPlanInScope = item.sources.some((source) => 
+            const hasMealPlanInScope = item.sources.some((source) =>
               source.mealPlanEntryId && mealPlanIdsInScope.has(source.mealPlanEntryId)
             );
             if (hasMealPlanInScope) {
               console.log('🔍 Item included (meal plan in scope):', item.name);
               return true;
             }
-            
+
             // IMPORTANT: Include items even if meal plan date is outside scope
             // The date scope filter should only hide items if includeInGrocery is false
             // Users should see all their grocery items regardless of date scope
@@ -290,15 +291,15 @@ const GroceriesScreen: React.FC = () => {
             console.log('🔍 Item included (meal plan outside scope but includeInGrocery: true):', item.name);
             return true;
           }
-          
+
           // Items with recipeId but no sources - include if recipe is in scope
           // or if we can't determine scope (backward compatibility)
           if (item.recipeId && (!item.sources || item.sources.length === 0)) {
             // Check if any meal plan with this recipeId is in scope
             const recipeMealPlansInScope = mealPlans.filter(
-              (plan) => plan.recipeId === item.recipeId && 
-                       isDateInScope(plan.date) && 
-                       plan.includeInGrocery
+              (plan) => plan.recipeId === item.recipeId &&
+                isDateInScope(plan.date) &&
+                plan.includeInGrocery
             );
             if (recipeMealPlansInScope.length > 0) {
               return true;
@@ -306,12 +307,12 @@ const GroceriesScreen: React.FC = () => {
             // If no meal plans found, include it (backward compatibility)
             return true;
           }
-          
+
           return true;
         });
       }
     }
-    
+
     // Filter by selected recipes if any are selected
     // If no recipes are selected, show all items (user hasn't filtered yet)
     if (selectedRecipeIds.size > 0) {
@@ -319,12 +320,12 @@ const GroceriesScreen: React.FC = () => {
       filtered = filtered.filter((item) => {
         // Always include pinned/manual items
         if (item.pinned) return true;
-        
+
         // If item has no sources and no recipeId, include it (manual item)
         if ((!item.sources || item.sources.length === 0) && !item.recipeId) {
           return true;
         }
-        
+
         // Check if item belongs to any selected recipe
         if (item.sources && item.sources.length > 0) {
           const matches = item.sources.some((source) => selectedRecipeIds.has(source.recipeId));
@@ -333,12 +334,12 @@ const GroceriesScreen: React.FC = () => {
           }
           return matches;
         }
-        
+
         // If item has recipeId directly
         if (item.recipeId && selectedRecipeIds.has(item.recipeId)) {
           return true;
         }
-        
+
         console.log('🔍 Item filtered out (no recipe match):', item.name, 'recipeId:', item.recipeId);
         return false;
       });
@@ -346,7 +347,7 @@ const GroceriesScreen: React.FC = () => {
     } else {
       console.log('🔍 No recipe filter applied (no recipes selected)');
     }
-    
+
     console.log('🔍 Filtered items count:', filtered.length, 'from', items.length);
     return filtered;
   }, [items, scopeStartDate, scopeEndDate, mealPlans, selectedRecipeIds]);
@@ -484,7 +485,7 @@ const GroceriesScreen: React.FC = () => {
   const detectMergeSuggestions = () => {
     const suggestions: Array<{ items: GroceryItem[]; suggestedName: string; totalAmount: string; unit?: string }> = [];
     const nameMap = new Map<string, GroceryItem[]>();
-    
+
     // Group items by normalized name
     uncheckedItems.forEach((item) => {
       const normalized = normalizeIngredientName(item.name);
@@ -493,7 +494,7 @@ const GroceriesScreen: React.FC = () => {
       }
       nameMap.get(normalized)!.push(item);
     });
-    
+
     // Find groups with multiple items (potential duplicates)
     nameMap.forEach((groupItems, normalizedName) => {
       if (groupItems.length > 1) {
@@ -503,7 +504,7 @@ const GroceriesScreen: React.FC = () => {
           const amount = parseFloat(item.amount) || 0;
           return sum + amount;
         }, 0).toString();
-        
+
         suggestions.push({
           items: groupItems,
           suggestedName: firstItem.name, // Use first item's name as base
@@ -512,7 +513,7 @@ const GroceriesScreen: React.FC = () => {
         });
       }
     });
-    
+
     return suggestions;
   };
 
@@ -616,8 +617,8 @@ const GroceriesScreen: React.FC = () => {
       const itemList = uncheckedItems
         .map((item) => {
           const quantity = item.unit
-            ? `${item.amount} ${item.unit} ${item.name}`
-            : `${item.amount} ${item.name}`;
+            ? `${formatFraction(item.amount)} ${item.unit} ${item.name}`
+            : `${formatFraction(item.amount)} ${item.name}`;
           return `- ${quantity}`;
         })
         .join('\n');
@@ -637,8 +638,8 @@ const GroceriesScreen: React.FC = () => {
       const itemList = uncheckedItems
         .map((item) => {
           const quantity = item.unit
-            ? `${item.amount} ${item.unit} ${item.name}`
-            : `${item.amount} ${item.name}`;
+            ? `${formatFraction(item.amount)} ${item.unit} ${item.name}`
+            : `${formatFraction(item.amount)} ${item.name}`;
           return `- ${quantity}`;
         })
         .join('\n');
@@ -695,7 +696,7 @@ const GroceriesScreen: React.FC = () => {
   const handleSelectAllShoppingList = () => {
     const newSelectAll = !selectAllShoppingList;
     setSelectAllShoppingList(newSelectAll);
-    
+
     if (newSelectAll) {
       // Mark all unchecked items as checked
       uncheckedItems.forEach((item) => {
@@ -821,10 +822,10 @@ const GroceriesScreen: React.FC = () => {
                 <TouchableOpacity
                   onPress={() => setRecipesCollapsed(!recipesCollapsed)}
                 >
-                  <Ionicons 
-                    name={recipesCollapsed ? "chevron-down" : "chevron-up"} 
-                    size={16} 
-                    color="#666" 
+                  <Ionicons
+                    name={recipesCollapsed ? "chevron-down" : "chevron-up"}
+                    size={16}
+                    color="#666"
                   />
                 </TouchableOpacity>
               </View>
@@ -843,10 +844,16 @@ const GroceriesScreen: React.FC = () => {
                   )}
                 </View>
                 <View style={styles.recipeImageContainerSmall}>
-                  {recipeImageUrls[recipe.id] || (recipe.image && typeof recipe.image === 'string' && (recipe.image.startsWith('http://') || recipe.image.startsWith('https://'))) ? (
-                    <Image 
-                      source={{ uri: recipeImageUrls[recipe.id] || recipe.image as string }} 
-                      style={styles.recipeImageSmall} 
+                  {recipeImageUrls[recipe.id] ? (
+                    <Image
+                      source={{ uri: recipeImageUrls[recipe.id] }}
+                      style={styles.recipeImageSmall}
+                      resizeMode="cover"
+                    />
+                  ) : recipe.image ? (
+                    <Image
+                      source={typeof recipe.image === 'string' ? { uri: recipe.image } : recipe.image}
+                      style={styles.recipeImageSmall}
                       resizeMode="cover"
                     />
                   ) : (
@@ -898,106 +905,106 @@ const GroceriesScreen: React.FC = () => {
               return 0;
             })
             .map(([category, categoryItems], index) => {
-            const isCustomItems = category === 'Custom items';
-            const isFirstCategory = index === 0;
-            return (
-            <View key={category} style={[styles.categoryGroup, isFirstCategory && styles.categoryGroupFirst]}>
-              <Text style={styles.categoryTitle}>{category}</Text>
-              {isCustomItems && (
-                <TouchableOpacity
-                  style={styles.addCustomItemButton}
-                  onPress={handleOpenAddModal}
-                >
-                  <View style={styles.addCustomItemButtonCircle}>
-                    <Ionicons name="add" size={16} color="#1A1A1A" />
-                  </View>
-                  <Text style={styles.addCustomItemButtonText}>Add item</Text>
-                </TouchableOpacity>
-              )}
-              {categoryItems.map((item) => {
-                const spriteCode = getIngredientSpriteCode(item.name);
-                const displayCategory = item.categoryOverride || item.category || 'OTHER';
-                const hasSources = item.sources && item.sources.length > 0;
-                const isManualItem = item.pinned && (!item.sources || item.sources.length === 0) && !item.recipeId;
-                return (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={styles.groceryItem}
-                    onPress={() => toggleItem(item.id)}
-                    onLongPress={() => handleItemLongPress(item)}
-                    activeOpacity={0.7}
-                  >
-                    <SpriteSheetIcon spriteCode={spriteCode} size={32} />
-                    <View style={styles.groceryItemContent}>
-                      <View style={styles.groceryItemHeader}>
-                        <Text style={styles.groceryItemName}>{item.name}</Text>
-                        {item.pinned && (
-                          <View style={styles.pinnedTag}>
-                            <Ionicons name="pin" size={12} color="#FF6B35" />
-                            <Text style={styles.pinnedText}>Manual</Text>
+              const isCustomItems = category === 'Custom items';
+              const isFirstCategory = index === 0;
+              return (
+                <View key={category} style={[styles.categoryGroup, isFirstCategory && styles.categoryGroupFirst]}>
+                  <Text style={styles.categoryTitle}>{category}</Text>
+                  {isCustomItems && (
+                    <TouchableOpacity
+                      style={styles.addCustomItemButton}
+                      onPress={handleOpenAddModal}
+                    >
+                      <View style={styles.addCustomItemButtonCircle}>
+                        <Ionicons name="add" size={16} color="#1A1A1A" />
+                      </View>
+                      <Text style={styles.addCustomItemButtonText}>Add item</Text>
+                    </TouchableOpacity>
+                  )}
+                  {categoryItems.map((item) => {
+                    const spriteCode = getIngredientSpriteCode(item.name);
+                    const displayCategory = item.categoryOverride || item.category || 'OTHER';
+                    const hasSources = item.sources && item.sources.length > 0;
+                    const isManualItem = item.pinned && (!item.sources || item.sources.length === 0) && !item.recipeId;
+                    return (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={styles.groceryItem}
+                        onPress={() => toggleItem(item.id)}
+                        onLongPress={() => handleItemLongPress(item)}
+                        activeOpacity={0.7}
+                      >
+                        <IngredientIcon name={item.name} type="whole" size="medium" />
+                        <View style={styles.groceryItemContent}>
+                          <View style={styles.groceryItemHeader}>
+                            <Text style={styles.groceryItemName}>{item.name}</Text>
+                            {item.pinned && (
+                              <View style={styles.pinnedTag}>
+                                <Ionicons name="pin" size={12} color="#FF6B35" />
+                                <Text style={styles.pinnedText}>Manual</Text>
+                              </View>
+                            )}
                           </View>
-                        )}
-                      </View>
-                      <View style={styles.groceryItemMeta}>
-                        <Text style={styles.groceryItemQuantity}>
-                          {item.unit ? `${item.amount} ${item.unit}` : item.amount}
-                        </Text>
-                        {item.notes && (
-                          <Text style={styles.groceryItemNotes}> • {item.notes}</Text>
-                        )}
-                        {hasSources && (
-                          <TouchableOpacity
-                            style={styles.sourcesButton}
-                            onPress={(e) => {
-                              e.stopPropagation();
-                              handleItemLongPress(item);
-                            }}
-                            activeOpacity={0.7}
-                          >
-                            <Ionicons name="information-circle-outline" size={14} color="#666" />
-                            <Text style={styles.sourcesText}>{item.sources!.length} recipe{item.sources!.length > 1 ? 's' : ''}</Text>
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                    </View>
-                    <View style={styles.groceryItemActions}>
-                      {isManualItem && (
-                        <TouchableOpacity
-                          style={styles.deleteButton}
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            Alert.alert(
-                              'Delete item',
-                              `Remove "${item.name}" from your shopping list?`,
-                              [
-                                { text: 'Cancel', style: 'cancel' },
-                                {
-                                  text: 'Delete',
-                                  style: 'destructive',
-                                  onPress: () => removeItem(item.id),
-                                },
-                              ]
-                            );
-                          }}
-                          activeOpacity={0.7}
-                        >
-                          <Ionicons name="trash-outline" size={18} color="#FF3B30" />
-                        </TouchableOpacity>
-                      )}
-                      <View style={styles.checkbox}>
-                        {item.checked && (
-                          <View style={styles.checkboxChecked}>
-                            <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                          <View style={styles.groceryItemMeta}>
+                            <Text style={styles.groceryItemQuantity}>
+                              {item.unit ? `${formatFraction(item.amount)} ${item.unit}` : formatFraction(item.amount)}
+                            </Text>
+                            {item.notes && (
+                              <Text style={styles.groceryItemNotes}> • {item.notes}</Text>
+                            )}
+                            {hasSources && (
+                              <TouchableOpacity
+                                style={styles.sourcesButton}
+                                onPress={(e) => {
+                                  e.stopPropagation();
+                                  handleItemLongPress(item);
+                                }}
+                                activeOpacity={0.7}
+                              >
+                                <Ionicons name="information-circle-outline" size={14} color="#666" />
+                                <Text style={styles.sourcesText}>{item.sources!.length} recipe{item.sources!.length > 1 ? 's' : ''}</Text>
+                              </TouchableOpacity>
+                            )}
                           </View>
-                        )}
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          );
-          })}
+                        </View>
+                        <View style={styles.groceryItemActions}>
+                          {isManualItem && (
+                            <TouchableOpacity
+                              style={styles.deleteButton}
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                Alert.alert(
+                                  'Delete item',
+                                  `Remove "${item.name}" from your shopping list?`,
+                                  [
+                                    { text: 'Cancel', style: 'cancel' },
+                                    {
+                                      text: 'Delete',
+                                      style: 'destructive',
+                                      onPress: () => removeItem(item.id),
+                                    },
+                                  ]
+                                );
+                              }}
+                              activeOpacity={0.7}
+                            >
+                              <Ionicons name="trash-outline" size={18} color="#FF3B30" />
+                            </TouchableOpacity>
+                          )}
+                          <View style={styles.checkbox}>
+                            {item.checked && (
+                              <View style={styles.checkboxChecked}>
+                                <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              );
+            })}
         </View>
 
         {/* Checked Items Section */}
@@ -1017,13 +1024,13 @@ const GroceriesScreen: React.FC = () => {
                   style={[styles.groceryItem, styles.checkedItem]}
                   onPress={() => toggleItem(item.id)}
                 >
-                  <SpriteSheetIcon spriteCode={spriteCode} size={32} checked />
+                  <IngredientIcon name={item.name} type="whole" size="medium" checked />
                   <View style={styles.groceryItemContent}>
                     <Text style={[styles.groceryItemName, styles.checkedItemText]}>
                       {item.name}
                     </Text>
                     <Text style={[styles.groceryItemQuantity, styles.checkedItemText]}>
-                      {item.unit ? `${item.amount} ${item.unit}` : item.amount}
+                      {item.unit ? `${formatFraction(item.amount)} ${item.unit}` : formatFraction(item.amount)}
                     </Text>
                   </View>
                   <View style={styles.checkbox}>
@@ -1112,7 +1119,7 @@ const GroceriesScreen: React.FC = () => {
         <BottomSheetView style={[styles.bottomSheetContent, { paddingBottom: Math.max(insets.bottom, 20) }]}>
           {/* Title */}
           <Text style={styles.sortModalTitle}>Sort by</Text>
-          
+
           {/* Sort Options */}
           <TouchableOpacity
             style={styles.sortOption}
@@ -1130,7 +1137,7 @@ const GroceriesScreen: React.FC = () => {
               <View style={styles.sortRadioUnselected} />
             )}
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.sortOption}
             onPress={() => {
@@ -1147,7 +1154,7 @@ const GroceriesScreen: React.FC = () => {
               <View style={styles.sortRadioUnselected} />
             )}
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.sortOption}
             onPress={() => {
@@ -1164,7 +1171,7 @@ const GroceriesScreen: React.FC = () => {
               <View style={styles.sortRadioUnselected} />
             )}
           </TouchableOpacity>
-          
+
           <TouchableOpacity
             style={styles.sortOption}
             onPress={() => {
@@ -1444,191 +1451,191 @@ const GroceriesScreen: React.FC = () => {
               <Ionicons name="close" size={24} color="#1A1A1A" />
             </TouchableOpacity>
           </View>
-                
-                <View style={styles.datePickerSection}>
-                  <Text style={styles.datePickerLabel}>Start date</Text>
-                  <TouchableOpacity
-                    style={styles.datePickerButton}
-                    onPress={() => setShowStartDatePicker(true)}
-                  >
-                    <Text style={styles.datePickerButtonText}>
-                      {customStartDate 
-                        ? customStartDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                        : 'Select start date'}
-                    </Text>
-                    <Ionicons name="calendar-outline" size={20} color="#666" />
-                  </TouchableOpacity>
-                  {showStartDatePicker && (
-                    <>
-                      {Platform.OS === 'ios' && (
-                        <View style={styles.iosDatePickerContainer}>
-                          <View style={styles.iosDatePickerHeader}>
-                            <TouchableOpacity
-                              onPress={() => setShowStartDatePicker(false)}
-                            >
-                              <Text style={styles.iosDatePickerButton}>Cancel</Text>
-                            </TouchableOpacity>
-                            <Text style={styles.iosDatePickerTitle}>Select Start Date</Text>
-                            <TouchableOpacity
-                              onPress={() => {
-                                if (customStartDate) {
-                                  setShowStartDatePicker(false);
-                                }
-                              }}
-                            >
-                              <Text style={[styles.iosDatePickerButton, styles.iosDatePickerButtonDone]}>Done</Text>
-                            </TouchableOpacity>
-                          </View>
-                          <DateTimePicker
-                            value={customStartDate || new Date()}
-                            mode="date"
-                            display="spinner"
-                            onChange={(event, selectedDate) => {
-                              if (selectedDate) {
-                                setCustomStartDate(selectedDate);
-                                // If end date is before new start date, clear it
-                                if (customEndDate && selectedDate > customEndDate) {
-                                  setCustomEndDate(null);
-                                }
-                              }
-                            }}
-                            minimumDate={new Date()}
-                            style={styles.iosDatePicker}
-                          />
-                        </View>
-                      )}
-                      {Platform.OS === 'android' && (
-                        <DateTimePicker
-                          value={customStartDate || new Date()}
-                          mode="date"
-                          display="default"
-                          onChange={(event, selectedDate) => {
+
+          <View style={styles.datePickerSection}>
+            <Text style={styles.datePickerLabel}>Start date</Text>
+            <TouchableOpacity
+              style={styles.datePickerButton}
+              onPress={() => setShowStartDatePicker(true)}
+            >
+              <Text style={styles.datePickerButtonText}>
+                {customStartDate
+                  ? customStartDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                  : 'Select start date'}
+              </Text>
+              <Ionicons name="calendar-outline" size={20} color="#666" />
+            </TouchableOpacity>
+            {showStartDatePicker && (
+              <>
+                {Platform.OS === 'ios' && (
+                  <View style={styles.iosDatePickerContainer}>
+                    <View style={styles.iosDatePickerHeader}>
+                      <TouchableOpacity
+                        onPress={() => setShowStartDatePicker(false)}
+                      >
+                        <Text style={styles.iosDatePickerButton}>Cancel</Text>
+                      </TouchableOpacity>
+                      <Text style={styles.iosDatePickerTitle}>Select Start Date</Text>
+                      <TouchableOpacity
+                        onPress={() => {
+                          if (customStartDate) {
                             setShowStartDatePicker(false);
-                            if (event.type === 'set' && selectedDate) {
-                              setCustomStartDate(selectedDate);
-                              // If end date is before new start date, clear it
-                              if (customEndDate && selectedDate > customEndDate) {
-                                setCustomEndDate(null);
-                              }
-                            }
-                          }}
-                          minimumDate={new Date()}
-                        />
-                      )}
-                    </>
-                  )}
-                </View>
-
-                <View style={styles.datePickerSection}>
-                  <Text style={styles.datePickerLabel}>End date</Text>
-                  <TouchableOpacity
-                    style={styles.datePickerButton}
-                    onPress={() => {
-                      if (!customStartDate) {
-                        Alert.alert('Select start date first');
-                        return;
-                      }
-                      setShowEndDatePicker(true);
-                    }}
-                    disabled={!customStartDate}
-                  >
-                    <Text style={[styles.datePickerButtonText, !customStartDate && styles.datePickerButtonTextDisabled]}>
-                      {customEndDate 
-                        ? customEndDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                        : 'Select end date'}
-                    </Text>
-                    <Ionicons name="calendar-outline" size={20} color={!customStartDate ? "#999" : "#666"} />
-                  </TouchableOpacity>
-                  {showEndDatePicker && (
-                    <>
-                      {Platform.OS === 'ios' && (
-                        <View style={styles.iosDatePickerContainer}>
-                          <View style={styles.iosDatePickerHeader}>
-                            <TouchableOpacity
-                              onPress={() => setShowEndDatePicker(false)}
-                            >
-                              <Text style={styles.iosDatePickerButton}>Cancel</Text>
-                            </TouchableOpacity>
-                            <Text style={styles.iosDatePickerTitle}>Select End Date</Text>
-                            <TouchableOpacity
-                              onPress={() => {
-                                if (customEndDate) {
-                                  setShowEndDatePicker(false);
-                                }
-                              }}
-                            >
-                              <Text style={[styles.iosDatePickerButton, styles.iosDatePickerButtonDone]}>Done</Text>
-                            </TouchableOpacity>
-                          </View>
-                          <DateTimePicker
-                            value={customEndDate || customStartDate || new Date()}
-                            mode="date"
-                            display="spinner"
-                            onChange={(event, selectedDate) => {
-                              if (selectedDate) {
-                                if (customStartDate && selectedDate < customStartDate) {
-                                  Alert.alert('End date must be after start date');
-                                  return;
-                                }
-                                setCustomEndDate(selectedDate);
-                              }
-                            }}
-                            minimumDate={customStartDate || new Date()}
-                            style={styles.iosDatePicker}
-                          />
-                        </View>
-                      )}
-                      {Platform.OS === 'android' && (
-                        <DateTimePicker
-                          value={customEndDate || customStartDate || new Date()}
-                          mode="date"
-                          display="default"
-                          onChange={(event, selectedDate) => {
-                            setShowEndDatePicker(false);
-                            if (event.type === 'set' && selectedDate) {
-                              if (customStartDate && selectedDate < customStartDate) {
-                                Alert.alert('End date must be after start date');
-                                return;
-                              }
-                              setCustomEndDate(selectedDate);
-                            }
-                          }}
-                          minimumDate={customStartDate || new Date()}
-                        />
-                      )}
-                    </>
-                  )}
-                </View>
-
-                {customStartDate && customEndDate && (
-                  <View style={styles.datePickerPreview}>
-                    <Text style={styles.datePickerPreviewText}>
-                      Shopping for meals from {formatDateRange(
-                        customStartDate.toISOString().split('T')[0],
-                        customEndDate.toISOString().split('T')[0]
-                      )}
-                    </Text>
-                    <Text style={styles.datePickerPreviewCount}>
-                      {mealPlans.filter((plan) => {
-                        const planDate = plan.date;
-                        const start = customStartDate.toISOString().split('T')[0];
-                        const end = customEndDate.toISOString().split('T')[0];
-                        return planDate >= start && planDate <= end && plan.includeInGrocery;
-                      }).length} meals
-                    </Text>
+                          }
+                        }}
+                      >
+                        <Text style={[styles.iosDatePickerButton, styles.iosDatePickerButtonDone]}>Done</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <DateTimePicker
+                      value={customStartDate || new Date()}
+                      mode="date"
+                      display="spinner"
+                      onChange={(event, selectedDate) => {
+                        if (selectedDate) {
+                          setCustomStartDate(selectedDate);
+                          // If end date is before new start date, clear it
+                          if (customEndDate && selectedDate > customEndDate) {
+                            setCustomEndDate(null);
+                          }
+                        }
+                      }}
+                      minimumDate={new Date()}
+                      style={styles.iosDatePicker}
+                    />
                   </View>
                 )}
+                {Platform.OS === 'android' && (
+                  <DateTimePicker
+                    value={customStartDate || new Date()}
+                    mode="date"
+                    display="default"
+                    onChange={(event, selectedDate) => {
+                      setShowStartDatePicker(false);
+                      if (event.type === 'set' && selectedDate) {
+                        setCustomStartDate(selectedDate);
+                        // If end date is before new start date, clear it
+                        if (customEndDate && selectedDate > customEndDate) {
+                          setCustomEndDate(null);
+                        }
+                      }
+                    }}
+                    minimumDate={new Date()}
+                  />
+                )}
+              </>
+            )}
+          </View>
 
-                <TouchableOpacity
-                  style={[
-                    styles.datePickerConfirmButton,
-                    (!customStartDate || !customEndDate) && styles.datePickerConfirmButtonDisabled
-                  ]}
-                  onPress={handleConfirmCustomRange}
-                  disabled={!customStartDate || !customEndDate}
-                >
-                  <Text style={styles.datePickerConfirmButtonText}>Confirm</Text>
-                </TouchableOpacity>
+          <View style={styles.datePickerSection}>
+            <Text style={styles.datePickerLabel}>End date</Text>
+            <TouchableOpacity
+              style={styles.datePickerButton}
+              onPress={() => {
+                if (!customStartDate) {
+                  Alert.alert('Select start date first');
+                  return;
+                }
+                setShowEndDatePicker(true);
+              }}
+              disabled={!customStartDate}
+            >
+              <Text style={[styles.datePickerButtonText, !customStartDate && styles.datePickerButtonTextDisabled]}>
+                {customEndDate
+                  ? customEndDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                  : 'Select end date'}
+              </Text>
+              <Ionicons name="calendar-outline" size={20} color={!customStartDate ? "#999" : "#666"} />
+            </TouchableOpacity>
+            {showEndDatePicker && (
+              <>
+                {Platform.OS === 'ios' && (
+                  <View style={styles.iosDatePickerContainer}>
+                    <View style={styles.iosDatePickerHeader}>
+                      <TouchableOpacity
+                        onPress={() => setShowEndDatePicker(false)}
+                      >
+                        <Text style={styles.iosDatePickerButton}>Cancel</Text>
+                      </TouchableOpacity>
+                      <Text style={styles.iosDatePickerTitle}>Select End Date</Text>
+                      <TouchableOpacity
+                        onPress={() => {
+                          if (customEndDate) {
+                            setShowEndDatePicker(false);
+                          }
+                        }}
+                      >
+                        <Text style={[styles.iosDatePickerButton, styles.iosDatePickerButtonDone]}>Done</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <DateTimePicker
+                      value={customEndDate || customStartDate || new Date()}
+                      mode="date"
+                      display="spinner"
+                      onChange={(event, selectedDate) => {
+                        if (selectedDate) {
+                          if (customStartDate && selectedDate < customStartDate) {
+                            Alert.alert('End date must be after start date');
+                            return;
+                          }
+                          setCustomEndDate(selectedDate);
+                        }
+                      }}
+                      minimumDate={customStartDate || new Date()}
+                      style={styles.iosDatePicker}
+                    />
+                  </View>
+                )}
+                {Platform.OS === 'android' && (
+                  <DateTimePicker
+                    value={customEndDate || customStartDate || new Date()}
+                    mode="date"
+                    display="default"
+                    onChange={(event, selectedDate) => {
+                      setShowEndDatePicker(false);
+                      if (event.type === 'set' && selectedDate) {
+                        if (customStartDate && selectedDate < customStartDate) {
+                          Alert.alert('End date must be after start date');
+                          return;
+                        }
+                        setCustomEndDate(selectedDate);
+                      }
+                    }}
+                    minimumDate={customStartDate || new Date()}
+                  />
+                )}
+              </>
+            )}
+          </View>
+
+          {customStartDate && customEndDate && (
+            <View style={styles.datePickerPreview}>
+              <Text style={styles.datePickerPreviewText}>
+                Shopping for meals from {formatDateRange(
+                  customStartDate.toISOString().split('T')[0],
+                  customEndDate.toISOString().split('T')[0]
+                )}
+              </Text>
+              <Text style={styles.datePickerPreviewCount}>
+                {mealPlans.filter((plan) => {
+                  const planDate = plan.date;
+                  const start = customStartDate.toISOString().split('T')[0];
+                  const end = customEndDate.toISOString().split('T')[0];
+                  return planDate >= start && planDate <= end && plan.includeInGrocery;
+                }).length} meals
+              </Text>
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={[
+              styles.datePickerConfirmButton,
+              (!customStartDate || !customEndDate) && styles.datePickerConfirmButtonDisabled
+            ]}
+            onPress={handleConfirmCustomRange}
+            disabled={!customStartDate || !customEndDate}
+          >
+            <Text style={styles.datePickerConfirmButtonText}>Confirm</Text>
+          </TouchableOpacity>
         </BottomSheetView>
       </BottomSheet>
     </SafeAreaView>

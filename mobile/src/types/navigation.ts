@@ -33,7 +33,8 @@ export type RootStackParamList = {
   Pricing: undefined;
   Home: { screen?: keyof TabParamList } | undefined;
   RecipeLibrary: undefined;
-  RecipeDetail: { recipeId: string };
+  RecipeCollection: { title: string; recipeIds?: string[] };
+  RecipeDetail: { recipeId: string; autoOpenMenu?: boolean };
   CookMode: { recipeId: string; showFullRecipe?: boolean };
   BrowserImport: undefined;
   PasteTextImport: undefined;

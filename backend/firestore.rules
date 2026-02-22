@@ -20,13 +20,8 @@ service cloud.firestore {
     
     // Recipes collection
     match /recipes/{recipeId} {
-      // Users can read:
-      // - Their own recipes (public or private)
-      // - Public recipes (isPublic == true)
-      allow read: if isAuthenticated() && (
-        (resource.data.keys().hasAny(['userId']) && resource.data.userId == request.auth.uid) ||
-        (resource.data.keys().hasAny(['isPublic']) && resource.data.isPublic == true)
-      );
+      // All authenticated users can read/list recipes in the admin panel
+      allow read: if isAuthenticated();
       
       // Users can create recipes (must set userId and isPublic)
       allow create: if isAuthenticated() && 
@@ -254,6 +249,12 @@ service cloud.firestore {
 
     // Challenges collection
     match /challenges/{challengeId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // Notifications collection
+    match /notifications/{notificationId} {
       allow read: if isAuthenticated();
       allow write: if isAuthenticated();
     }

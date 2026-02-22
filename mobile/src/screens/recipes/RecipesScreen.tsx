@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Animated, ActivityIndicator, TextInput } from 'react-native';
+import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Animated, ActivityIndicator, TextInput, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useUserPreferencesStore } from '../../stores/userPreferencesStore';
@@ -23,7 +23,7 @@ import { useModal } from '../../context/ModalContext';
 import { ref, getDownloadURL } from 'firebase/storage';
 import { storage, db, auth, functions } from '../../services/firebase';
 import { httpsCallable } from 'firebase/functions';
-import { collection, query, where, getDocs, doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, onSnapshot, Timestamp, orderBy } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type RecipesScreenNavigationProp = CompositeNavigationProp<
@@ -37,17 +37,48 @@ interface RecipesScreenProps {
 
 const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
   const theme = useTheme();
-  const { recipes, addRecipe, setRecipes, updateRecipe } = useRecipesStore();
+  const { recipes, addRecipe, setRecipes, updateRecipe, loadRecipesFromFirebase } = useRecipesStore();
   const { collections, addCollection } = useCollectionsStore();
   const { mealPlans, addMealPlan } = useMealPlanStore();
   const { items: groceryItems, recipes: groceryRecipes, addItems } = useGroceriesStore();
   const { showImportModal } = useModal();
   const { dietaryPreference, intolerances, favouriteCuisines, dislikesAllergies } = useUserPreferencesStore();
-  const { hasUnreadMessages } = useNotificationsStore();
+  const { readMessageIds } = useNotificationsStore();
 
-  // Message IDs - should match the ones in NotificationsScreen
-  const messageIds = ['1', '2', '3', '4'];
-  const hasUnread = hasUnreadMessages(messageIds);
+  const [notificationIds, setNotificationIds] = useState<string[]>([]);
+  const hasUnread = notificationIds.some(id => !readMessageIds.includes(id));
+
+  console.log('[DEBUG NOTIFICATIONS] RecipesScreen render:', {
+    notificationIdsCount: notificationIds.length,
+    readMessageIdsCount: readMessageIds.length,
+    hasUnread,
+    firstFewNotificationIds: notificationIds.slice(0, 3)
+  });
+
+  useEffect(() => {
+    // Listen for incoming notifications to update the unread dot
+    const q = query(
+      collection(db, 'notifications'),
+      orderBy('scheduledFor', 'desc')
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const ids: string[] = [];
+      const now = new Date();
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const scheduledFor = (data.scheduledFor as Timestamp)?.toDate();
+        // Only count as unread if it's already scheduled to be sent
+        if (scheduledFor && scheduledFor <= now) {
+          ids.push(doc.id);
+        }
+      });
+      console.log(`[DEBUG NOTIFICATIONS] Snapshot listener found ${ids.length} valid notifications.`);
+      setNotificationIds(ids);
+    }, (error) => {
+      console.error('RecipesScreen notification listener error:', error);
+    });
+    return () => unsubscribe();
+  }, []);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [filterBy, setFilterBy] = useState<'recipes' | 'packs'>('recipes');
   const [showAddToMenuModal, setShowAddToMenuModal] = useState(false);
@@ -92,6 +123,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
   const [showCreateCollection, setShowCreateCollection] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
   const [selectedRecipeForCollection, setSelectedRecipeForCollection] = useState<Recipe | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Challenges state
   interface Challenge {
@@ -104,6 +136,31 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
     recipeCount: number;
   }
   const [challenges, setChallenges] = useState<Challenge[]>([]);
+
+  // Refresh recipes (pull-to-refresh or when switching back to this tab)
+  const handleRefresh = useCallback(async () => {
+    if (!auth.currentUser) {
+      setIsRefreshing(false);
+      return;
+    }
+    setIsRefreshing(true);
+    try {
+      await loadRecipesFromFirebase();
+    } catch (error) {
+      console.error('Error refreshing recipes:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [loadRecipesFromFirebase]);
+
+  // When user switches back to Recipes tab, refresh so new admin recipes show
+  useFocusEffect(
+    useCallback(() => {
+      if (auth.currentUser) {
+        loadRecipesFromFirebase();
+      }
+    }, [loadRecipesFromFirebase])
+  );
 
   // Fetch challenges
   useEffect(() => {
@@ -344,14 +401,22 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
     }
   };
 
+  const formatDateKey = (date: Date): string => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
   const handleDaySelect = (dayIndex: number) => {
-    const dayKey = weekDates[dayIndex].toISOString().split('T')[0];
+    const dayKey = formatDateKey(weekDates[dayIndex]);
     setSelectedDay(dayKey);
   };
 
   const handleAddToMenu = () => {
     if (!selectedRecipeForMenu || !selectedMealType) return;
 
+    const recipeServings = selectedRecipeForMenu.servings || 4;
     const newMealPlan: MealPlanItem = {
       id: `${Date.now()}-${Math.random()}`,
       recipeId: selectedRecipeForMenu.id,
@@ -360,14 +425,13 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
       mealType: selectedMealType as 'breakfast' | 'lunch' | 'dinner' | 'snack',
       date: selectedDay || '', // Empty string for shelf if no date selected
       includeInGrocery: true,
-      servingsOverride: undefined,
+      servingsOverride: recipeServings,
     };
 
     addMealPlan(newMealPlan);
 
     // Automatically add ingredients to groceries list if includeInGrocery is true
     if (newMealPlan.includeInGrocery && selectedRecipeForMenu.ingredients && selectedRecipeForMenu.ingredients.length > 0) {
-      const recipeServings = selectedRecipeForMenu.servings || 4;
       const targetServings = newMealPlan.servingsOverride || recipeServings;
 
       // Adjust ingredients based on servings
@@ -397,6 +461,8 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
     setSelectedRecipeForMenu(null);
     setSelectedDay(null);
     setSelectedMealType(null);
+    setShowRecipeOptionsBottomSheet(false);
+    setSelectedRecipeForOptions(null);
   };
 
   const getMealTypeColor = (mealType: string): string => {
@@ -656,7 +722,9 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
     : allRecipes.length === 1
       ? [allRecipes[0], allRecipes[0]] // Duplicate the single recipe
       : []; // Fallback if no recipes
-  const myRecipes = allRecipes; // All user recipes
+
+  const currentUser = auth.currentUser;
+  const myRecipes = allRecipes.filter(r => currentUser && r.userId === currentUser.uid); // Only user's own recipes
   const ourPicks = allRecipes.slice(0, 2); // Mock "Our Picks"
 
   // Calculate square size for 4 items with gaps
@@ -759,6 +827,14 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
         showsVerticalScrollIndicator={false}
         scrollEnabled={true}
         nestedScrollEnabled={true}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor="#1A1A1A"
+            colors={['#1A1A1A']}
+          />
+        }
         onScroll={(event) => {
           const offsetY = event.nativeEvent.contentOffset.y;
           setIsScrolled(offsetY > 50); // Change to square button after scrolling 50px
@@ -919,8 +995,8 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>My Recipes</Text>
-            <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('MyRecipes')}>
-              <Ionicons name="arrow-forward" size={16} color="#1A1A1A" />
+            <TouchableOpacity onPress={() => navigation.navigate('MyRecipes')}>
+              <Text style={styles.viewAllLinkText}>View all</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.myRecipesWrapper}>
@@ -987,8 +1063,13 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Our Picks</Text>
-              <TouchableOpacity style={styles.viewAllButton}>
-                <Ionicons name="arrow-forward" size={16} color="#1A1A1A" />
+              <TouchableOpacity
+                onPress={() => navigation.navigate('RecipeCollection', {
+                  title: 'Amazing Recipes You Should Try',
+                  recipeIds: ourPicks.map((r) => r.id)
+                })}
+              >
+                <Text style={styles.viewAllLinkText}>View all</Text>
               </TouchableOpacity>
             </View>
             <ScrollView
@@ -1033,78 +1114,78 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
         )}
 
         {/* Challenges Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Challenges</Text>
-            <TouchableOpacity
-              style={styles.viewAllButton}
-              onPress={() => navigation.navigate('Challenges')}
+        {topChallenges.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Challenges</Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Challenges')}
+              >
+                <Text style={styles.viewAllLinkText}>View all</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalScroll}
             >
-              <Ionicons name="arrow-forward" size={16} color="#1A1A1A" />
-            </TouchableOpacity>
-          </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalScroll}
-          >
-            {topChallenges.map((challenge) => {
-              const isJoined = joinedChallengeIds.includes(challenge.id);
-              const completedRecipes = challengeProgress[challenge.id] || 0;
-              const progressPercentage = challenge.recipeCount > 0
-                ? (completedRecipes / challenge.recipeCount) * 100
-                : 0;
+              {topChallenges.map((challenge) => {
+                const isJoined = joinedChallengeIds.includes(challenge.id);
+                const completedRecipes = challengeProgress[challenge.id] || 0;
+                const progressPercentage = challenge.recipeCount > 0
+                  ? (completedRecipes / challenge.recipeCount) * 100
+                  : 0;
 
-              return (
-                <TouchableOpacity
-                  key={challenge.id}
-                  style={[styles.challengeCard, { backgroundColor: challenge.backgroundColor }]}
-                  onPress={() => navigation.navigate('ChallengeDetail', { challengeId: challenge.id })}
-                >
-                  <View style={styles.challengeProfileContainer}>
-                    <View style={styles.challengeProfileImage}>
-                      <View style={styles.challengeProfilePlaceholder}>
-                        <Text style={styles.challengeProfileEmoji}>{challenge.profileEmoji}</Text>
-                      </View>
-                    </View>
-                    <View style={styles.challengeContent}>
-                      <View style={styles.challengeTitleRow}>
-                        <Text style={styles.challengeTitle} numberOfLines={2}>
-                          {challenge.title}
-                        </Text>
-                        <View style={styles.challengeStats}>
-                          <Ionicons name="people-outline" size={16} color="#1A1A1A" />
-                          <Text style={styles.challengeParticipants}>
-                            {challenge.participants.toLocaleString()}
-                          </Text>
+                return (
+                  <TouchableOpacity
+                    key={challenge.id}
+                    style={[styles.challengeCard, { backgroundColor: challenge.backgroundColor }]}
+                    onPress={() => navigation.navigate('ChallengeDetail', { challengeId: challenge.id })}
+                  >
+                    <View style={styles.challengeProfileContainer}>
+                      <View style={styles.challengeProfileImage}>
+                        <View style={styles.challengeProfilePlaceholder}>
+                          <Text style={styles.challengeProfileEmoji}>{challenge.profileEmoji}</Text>
                         </View>
                       </View>
-                      <Text style={styles.challengeDescription}>
-                        {challenge.description}
-                      </Text>
-                      {isJoined && (
-                        <View style={styles.challengeProgressContainer}>
-                          <Text style={styles.challengeProgressText}>
-                            {completedRecipes}/{challenge.recipeCount} Recipes
+                      <View style={styles.challengeContent}>
+                        <View style={styles.challengeTitleRow}>
+                          <Text style={styles.challengeTitle} numberOfLines={2}>
+                            {challenge.title}
                           </Text>
-                          <View style={styles.challengeProgressBarBackground}>
-                            <View
-                              style={[
-                                styles.challengeProgressBarFill,
-                                { width: `${progressPercentage}%` },
-                              ]}
-                            />
+                          <View style={styles.challengeStats}>
+                            <Ionicons name="people-outline" size={16} color="#1A1A1A" />
+                            <Text style={styles.challengeParticipants}>
+                              {challenge.participants.toLocaleString()}
+                            </Text>
                           </View>
                         </View>
-                      )}
+                        <Text style={styles.challengeDescription}>
+                          {challenge.description}
+                        </Text>
+                        {isJoined && (
+                          <View style={styles.challengeProgressContainer}>
+                            <Text style={styles.challengeProgressText}>
+                              {completedRecipes}/{challenge.recipeCount} Recipes
+                            </Text>
+                            <View style={styles.challengeProgressBarBackground}>
+                              <View
+                                style={[
+                                  styles.challengeProgressBarFill,
+                                  { width: `${progressPercentage}%` },
+                                ]}
+                              />
+                            </View>
+                          </View>
+                        )}
+                      </View>
                     </View>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
       </ScrollView>
 
       {/* Filter Bottom Sheet */}
@@ -1162,6 +1243,8 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
           setSelectedRecipeForMenu(null);
           setSelectedDay(null);
           setSelectedMealType(null);
+          setShowRecipeOptionsBottomSheet(false);
+          setSelectedRecipeForOptions(null);
         }}
       >
         {selectedRecipeForMenu && (
@@ -1176,6 +1259,8 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
                   setSelectedRecipeForMenu(null);
                   setSelectedDay(null);
                   setSelectedMealType(null);
+                  setShowRecipeOptionsBottomSheet(false);
+                  setSelectedRecipeForOptions(null);
                 }}
               >
                 <Ionicons name="close" size={24} color="#1A1A1A" />
@@ -1255,7 +1340,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
             {/* Day Selection Buttons */}
             <View style={styles.daySelectionContainer}>
               {weekDates.map((date, index) => {
-                const dayKey = date.toISOString().split('T')[0];
+                const dayKey = formatDateKey(date);
                 const dayName = date.toLocaleDateString('en-US', { weekday: 'short' }).substring(0, 3);
                 const isSelected = selectedDay === dayKey;
 
@@ -1268,10 +1353,14 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
                     ]}
                     onPress={() => handleDaySelect(index)}
                   >
-                    <Text style={[
-                      styles.dayButtonText,
-                      isSelected && styles.dayButtonTextSelected
-                    ]}>
+                    <Text
+                      style={[
+                        styles.dayButtonText,
+                        isSelected && styles.dayButtonTextSelected
+                      ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit={true}
+                    >
                       {dayName}
                     </Text>
                   </TouchableOpacity>
@@ -1401,9 +1490,11 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
                     style={styles.recipeOptionItem}
                     onPress={(e) => {
                       e.stopPropagation();
-                      setShowRecipeOptionsBottomSheet(false);
-                      setSelectedRecipeForMenu(selectedRecipeForOptions);
-                      setShowAddToMenuModal(true);
+                      if (selectedRecipeForOptions) {
+                        setSelectedRecipeForMenu(selectedRecipeForOptions);
+                        setShowAddToMenuModal(true);
+                        setShowRecipeOptionsBottomSheet(false);
+                      }
                     }}
                   >
                     <Ionicons name="calendar-outline" size={24} color="#1A1A1A" />
@@ -1572,13 +1663,44 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
                           const updatedCollections = isSelected
                             ? currentCollections.filter((col: string) => col !== coll)
                             : [...currentCollections, coll];
-                          const updateRecipeFunction = httpsCallable(functions, 'updateRecipe');
-                          await updateRecipeFunction({
-                            recipeId: selectedRecipeForCollection.id,
-                            collections: updatedCollections.length > 0 ? updatedCollections : [],
-                          });
-                          updateRecipe(selectedRecipeForCollection.id, { collections: updatedCollections });
-                          setSelectedRecipeForCollection({ ...selectedRecipeForCollection, collections: updatedCollections } as Recipe);
+                          const currentUser = auth.currentUser;
+                          if (currentUser && selectedRecipeForCollection.userId !== currentUser.uid) {
+                            // Clone public recipe for the collection
+                            const newRecipeData = {
+                              title: selectedRecipeForCollection.title,
+                              description: selectedRecipeForCollection.description,
+                              ingredients: selectedRecipeForCollection.ingredients,
+                              steps: selectedRecipeForCollection.steps,
+                              image: selectedRecipeForCollection.image,
+                              servings: selectedRecipeForCollection.servings,
+                              prepTime: selectedRecipeForCollection.prepTime,
+                              cookTime: selectedRecipeForCollection.cookTime,
+                              nutrition: selectedRecipeForCollection.nutrition,
+                              equipment: selectedRecipeForCollection.equipment,
+                              tags: selectedRecipeForCollection.tags,
+                              cuisine: selectedRecipeForCollection.cuisine,
+                              notes: selectedRecipeForCollection.notes ? `${selectedRecipeForCollection.notes}\n\nCloned from: ${selectedRecipeForCollection.id}` : `Cloned from: ${selectedRecipeForCollection.id}`,
+                              sourceUrls: selectedRecipeForCollection.sourceUrls || [],
+                              collections: [coll], // Start fresh with just the new collection
+                              isPublic: false
+                            };
+
+                            const createRecipeFn = httpsCallable(functions, 'createRecipe');
+                            const result = await createRecipeFn(newRecipeData);
+                            const { recipeId: newRecipeId, recipe: newRecipeObj } = result.data as any;
+
+                            addRecipe(newRecipeObj);
+                            setSelectedRecipeForCollection(newRecipeObj);
+                          } else {
+                            // Update owned recipe
+                            const updateRecipeFunction = httpsCallable(functions, 'updateRecipe');
+                            await updateRecipeFunction({
+                              recipeId: selectedRecipeForCollection.id,
+                              collections: updatedCollections.length > 0 ? updatedCollections : [],
+                            });
+                            updateRecipe(selectedRecipeForCollection.id, { collections: updatedCollections });
+                            setSelectedRecipeForCollection({ ...selectedRecipeForCollection, collections: updatedCollections } as Recipe);
+                          }
                           setToastMessage(isSelected ? `Removed from "${coll}"` : `Added to "${coll}"`);
                           setToastType('success');
                           setToastVisible(true);
@@ -1645,13 +1767,45 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
                         ? (selectedRecipeForCollection as any).collections
                         : ((selectedRecipeForCollection as any).cookbook ? [(selectedRecipeForCollection as any).cookbook] : []);
                       const updatedCollections = [...currentCollections, newCollectionName.trim()];
-                      const updateRecipeFunction = httpsCallable(functions, 'updateRecipe');
-                      await updateRecipeFunction({
-                        recipeId: selectedRecipeForCollection.id,
-                        collections: updatedCollections,
-                      });
-                      updateRecipe(selectedRecipeForCollection.id, { collections: updatedCollections });
-                      setSelectedRecipeForCollection({ ...selectedRecipeForCollection, collections: updatedCollections } as Recipe);
+                      const trimmedName = newCollectionName.trim();
+                      const currentUser = auth.currentUser;
+                      if (currentUser && selectedRecipeForCollection.userId !== currentUser.uid) {
+                        // Clone public recipe for new collection
+                        const newRecipeData = {
+                          title: selectedRecipeForCollection.title,
+                          description: selectedRecipeForCollection.description,
+                          ingredients: selectedRecipeForCollection.ingredients,
+                          steps: selectedRecipeForCollection.steps,
+                          image: selectedRecipeForCollection.image,
+                          servings: selectedRecipeForCollection.servings,
+                          prepTime: selectedRecipeForCollection.prepTime,
+                          cookTime: selectedRecipeForCollection.cookTime,
+                          nutrition: selectedRecipeForCollection.nutrition,
+                          equipment: selectedRecipeForCollection.equipment,
+                          tags: selectedRecipeForCollection.tags,
+                          cuisine: selectedRecipeForCollection.cuisine,
+                          notes: selectedRecipeForCollection.notes ? `${selectedRecipeForCollection.notes}\n\nCloned from: ${selectedRecipeForCollection.id}` : `Cloned from: ${selectedRecipeForCollection.id}`,
+                          sourceUrls: selectedRecipeForCollection.sourceUrls || [],
+                          collections: [trimmedName],
+                          isPublic: false
+                        };
+
+                        const createRecipeFn = httpsCallable(functions, 'createRecipe');
+                        const result = await createRecipeFn(newRecipeData);
+                        const { recipeId: newRecipeId, recipe: newRecipeObj } = result.data as any;
+
+                        addRecipe(newRecipeObj);
+                        setSelectedRecipeForCollection(newRecipeObj);
+                      } else {
+                        // Update owned recipe
+                        const updateRecipeFunction = httpsCallable(functions, 'updateRecipe');
+                        await updateRecipeFunction({
+                          recipeId: selectedRecipeForCollection.id,
+                          collections: updatedCollections,
+                        });
+                        updateRecipe(selectedRecipeForCollection.id, { collections: updatedCollections });
+                        setSelectedRecipeForCollection({ ...selectedRecipeForCollection, collections: updatedCollections } as Recipe);
+                      }
                       setNewCollectionName('');
                       setShowCreateCollection(false);
                       setShowCollectionSelection(false);
@@ -3794,10 +3948,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1A1A1A',
   },
-  viewAllLink: {
+  viewAllLinkText: {
     fontSize: 14,
-    fontWeight: '400',
+    fontWeight: '500',
     color: '#1A1A1A',
+    textDecorationLine: 'underline',
   },
   viewAllButton: {
     width: 32,
@@ -4194,12 +4349,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 32,
-    gap: 8,
+    gap: 4,
   },
   dayButton: {
     flex: 1,
     paddingVertical: 12,
-    paddingHorizontal: 8,
+    paddingHorizontal: 2,
     borderRadius: 12,
     backgroundColor: '#F5F5F0',
     alignItems: 'center',
@@ -4212,7 +4367,7 @@ const styles = StyleSheet.create({
     borderColor: '#CEEC2C',
   },
   dayButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
     color: '#666666',
   },

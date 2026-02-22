@@ -28,27 +28,27 @@ export const useGroceries = () => {
 // Helper function to categorize ingredients
 const categorizeIngredient = (name: string): string => {
   const lowerName = name.toLowerCase();
-  
-  if (lowerName.includes('parsley') || lowerName.includes('basil') || lowerName.includes('herb') || 
-      lowerName.includes('cilantro') || lowerName.includes('rosemary') || lowerName.includes('thyme') ||
-      lowerName.includes('oregano') || lowerName.includes('sage') || lowerName.includes('mint')) {
+
+  if (lowerName.includes('parsley') || lowerName.includes('basil') || lowerName.includes('herb') ||
+    lowerName.includes('cilantro') || lowerName.includes('rosemary') || lowerName.includes('thyme') ||
+    lowerName.includes('oregano') || lowerName.includes('sage') || lowerName.includes('mint')) {
     return 'HERBS & SPICES';
   }
-  
+
   if (lowerName.includes('milk') || lowerName.includes('cream') || lowerName.includes('cheese') ||
-      lowerName.includes('butter') || lowerName.includes('yogurt') || lowerName.includes('egg')) {
+    lowerName.includes('butter') || lowerName.includes('yogurt') || lowerName.includes('egg')) {
     return 'DAIRY, EGGS & FRIDGE';
   }
-  
+
   if (lowerName.includes('pasta') || lowerName.includes('spaghetti') || lowerName.includes('rice') ||
-      lowerName.includes('quinoa') || lowerName.includes('bread') || lowerName.includes('flour')) {
+    lowerName.includes('quinoa') || lowerName.includes('bread') || lowerName.includes('flour')) {
     return 'PASTA, GRAINS & LEGUMES';
   }
-  
+
   if (lowerName.includes('oil') || lowerName.includes('vinegar') || lowerName.includes('sauce')) {
     return 'OILS & VINEGARS';
   }
-  
+
   return 'FRESH PRODUCE';
 };
 
@@ -68,10 +68,11 @@ export const GroceriesProvider: React.FC<{ children: ReactNode }> = ({ children 
       recipeTitle,
       category: categorizeIngredient(ingredient.name),
       createdAt: new Date().toISOString(),
+      pinned: false,
     }));
-    
+
     setItems((prev) => [...prev, ...newItems]);
-    
+
     // Add recipe if not already present
     if (recipeId && recipeTitle) {
       setRecipes((prev) => {
@@ -96,7 +97,7 @@ export const GroceriesProvider: React.FC<{ children: ReactNode }> = ({ children 
       }
       return [...prev, recipe];
     });
-    
+
     // Also add the ingredients
     addItems(recipe.ingredients, recipe.id, recipe.title);
   }, [addItems]);
@@ -136,8 +137,9 @@ export const GroceriesProvider: React.FC<{ children: ReactNode }> = ({ children 
       checked: false,
       category: categorizeIngredient(name),
       createdAt: new Date().toISOString(),
+      pinned: true,
     };
-    
+
     setItems((prev) => [...prev, newItem]);
   }, []);
 

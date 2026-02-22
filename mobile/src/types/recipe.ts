@@ -42,7 +42,7 @@ export interface Recipe {
   tags?: string[]; // Tags for categorization/search
   collections?: string[]; // Array of collection/cookbook names (e.g., ["Favorites", "Want to cook", "One-Pot"])
   notes?: string;
-  chefTips?: string[];
+  chefTips?: Array<{ type: 'tip' | 'make-ahead'; text: string; }>;
   cookbook?: string; // Legacy field for single collection
   cuisine?: string;
   sourceUrls?: string[];

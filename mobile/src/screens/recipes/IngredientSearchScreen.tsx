@@ -6,9 +6,8 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  SafeAreaView,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
@@ -111,9 +110,9 @@ const IngredientSearchScreen: React.FC<IngredientSearchScreenProps> = ({ navigat
           >
             {selectedIngredients.map((ingredientId) => {
               const ingredient = ALL_INGREDIENTS.find(item => item.id === ingredientId);
-              
+
               if (!ingredient) return null;
-              
+
               return (
                 <View key={ingredient.id} style={styles.selectedChip}>
                   <Text style={styles.selectedChipIcon}>{ingredient.icon}</Text>

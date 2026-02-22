@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeProvider';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,9 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useNotificationsStore } from '../../stores/notificationsStore';
+import { collection, query, where, orderBy, onSnapshot, Timestamp, getDoc, doc } from 'firebase/firestore';
+import { db, storage } from '../../services/firebase';
+import { ref, getDownloadURL } from 'firebase/storage';
 
 type NotificationsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Notifications'>;
 
@@ -16,54 +19,118 @@ interface Message {
   timestamp: string;
   date: string;
   content: string;
+  imageUrl?: string;
+  recipeId?: string;
+  recipeTitle?: string;
+  isRead: boolean;
 }
 
 const NotificationsScreen: React.FC = () => {
   const theme = useTheme();
   const navigation = useNavigation<NotificationsScreenNavigationProp>();
-  const { markAsRead } = useNotificationsStore();
+  const { markAsRead, readMessageIds } = useNotificationsStore();
+  const [messages, setMessages] = useState<Message[]>([]);
 
-  // Sample messages data - grouped by date
-  const messages: Message[] = [
-    {
-      id: '4',
-      sender: 'Gastron',
-      timestamp: '10:30AM',
-      date: 'Today',
-      content: "New recipe recommendations are ready! Check out our latest collection of delicious dishes tailored just for you.",
-    },
-    {
-      id: '1',
-      sender: 'Gastron',
-      timestamp: '2:00AM',
-      date: 'Saturday 17th of January',
-      content: "You've got some amazing recipes lined up—now let's get started! Dive into your first recipe and enjoy the culinary adventure.",
-    },
-    {
-      id: '2',
-      sender: 'Gastron',
-      timestamp: '3:00AM',
-      date: 'Friday 16th of January',
-      content: "Let us know your dietary needs, and we'll make sure your recipe recommendations fit you perfectly. Whether you're plant-based, gluten-free, or have any other preferences, we've got you covered. Take a moment to customise your experience now!",
-    },
-    {
-      id: '3',
-      sender: 'Gastron',
-      timestamp: '2:00AM',
-      date: 'Tuesday 13th of January',
-      content: "Great news! We've saved your dietary preferences and customized your recipe recommendations just for you. Whether you're looking for something quick, hearty, or light, we've got plenty of options that match your taste. Ready to discover your perfect dish? Let's get cooking!",
-    },
-  ];
+  useEffect(() => {
+    const q = query(
+      collection(db, 'notifications'),
+      orderBy('scheduledFor', 'desc')
+    );
 
-  // Mark all messages as read when screen is focused
-  useFocusEffect(
-    React.useCallback(() => {
-      const messageIds = ['1', '2', '3', '4']; // Match the IDs from messages array
-      messageIds.forEach(id => {
-        markAsRead(id);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedMessages: Message[] = [];
+      const newIds: string[] = [];
+      const now = new Date();
+
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const scheduledFor = (data.scheduledFor as Timestamp)?.toDate();
+
+        // Only show notifications that are scheduled for now or the past
+        if (!scheduledFor || scheduledFor > now) return;
+
+        // Parse date for grouping
+        let dateObj = new Date();
+        if (data.scheduledFor) {
+          dateObj = data.scheduledFor.toDate();
+        } else if (data.createdAt) {
+          dateObj = data.createdAt.toDate();
+        }
+
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        let dateGroup = dateObj.toLocaleDateString();
+        if (dateObj.toDateString() === today.toDateString()) {
+          dateGroup = 'Today';
+        } else if (dateObj.toDateString() === yesterday.toDateString()) {
+          dateGroup = 'Yesterday';
+        } else {
+          dateGroup = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+        }
+
+        fetchedMessages.push({
+          id: doc.id,
+          sender: data.sender || 'Gastron',
+          timestamp: dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          date: dateGroup,
+          content: data.body,
+          imageUrl: data.imageUrl,
+          recipeId: data.recipeId,
+          isRead: readMessageIds.includes(doc.id)
+        });
+
+        if (!readMessageIds.includes(doc.id)) {
+          newIds.push(doc.id);
+        }
       });
-    }, [markAsRead])
-  );
+
+      // After fetching all messages, separately fetch recipe titles for ones with a recipeId
+      const enrichMessagesWithRecipes = async () => {
+        const enriched = await Promise.all(fetchedMessages.map(async (msg) => {
+          if (msg.recipeId) {
+            try {
+              const recipeDoc = await getDoc(doc(db, 'recipes', msg.recipeId));
+              if (recipeDoc.exists()) {
+                const data = recipeDoc.data();
+                let finalImageUrl = msg.imageUrl || data.image;
+
+                // Resolve Firebase Storage paths
+                if (finalImageUrl && typeof finalImageUrl === 'string' &&
+                  !finalImageUrl.startsWith('http') &&
+                  !finalImageUrl.startsWith('file://')) {
+                  try {
+                    finalImageUrl = await getDownloadURL(ref(storage, finalImageUrl));
+                  } catch (imgError) {
+                    console.error('Error resolving image URL:', imgError);
+                  }
+                }
+
+                return {
+                  ...msg,
+                  recipeTitle: data.title,
+                  imageUrl: finalImageUrl
+                };
+              }
+            } catch (err) {
+              console.error('Error fetching recipe for notification:', err);
+            }
+          }
+          return msg;
+        }));
+        setMessages(enriched);
+      };
+
+      enrichMessagesWithRecipes();
+
+      // Auto-mark as read when fetched
+      newIds.forEach(id => markAsRead(id));
+
+    });
+
+    return () => unsubscribe();
+  }, [markAsRead, readMessageIds]);
 
   // Group messages by date
   const groupedMessages = messages.reduce((acc, message) => {
@@ -120,6 +187,39 @@ const NotificationsScreen: React.FC = () => {
                   </View>
                 </View>
                 <Text style={styles.messageContent}>{message.content}</Text>
+                {message.imageUrl && !message.recipeId && (
+                  <Image source={{ uri: message.imageUrl }} style={styles.messageImage} />
+                )}
+
+                {message.recipeId && (
+                  <TouchableOpacity
+                    style={styles.recipeCardContainer}
+                    onPress={() => navigation.navigate('RecipeDetail', { recipeId: message.recipeId! })}
+                    activeOpacity={0.9}
+                  >
+                    <View style={styles.recipeImageWrapper}>
+                      {message.imageUrl ? (
+                        <Image source={{ uri: message.imageUrl }} style={styles.recipeCardImage} />
+                      ) : (
+                        <View style={[styles.recipeCardImage, styles.recipeImagePlaceholder]}>
+                          <Ionicons name="restaurant-outline" size={40} color="#CCCCCC" />
+                        </View>
+                      )}
+
+                      {/* Plus Button Overlay */}
+                      <TouchableOpacity
+                        style={styles.plusButtonOverlay}
+                        onPress={() => navigation.navigate('RecipeDetail', { recipeId: message.recipeId!, autoOpenMenu: true })}
+                      >
+                        <Ionicons name="add" size={24} color="#1A1A1A" />
+                      </TouchableOpacity>
+                    </View>
+
+                    {message.recipeTitle && (
+                      <Text style={styles.recipeCardTitle}>{message.recipeTitle}</Text>
+                    )}
+                  </TouchableOpacity>
+                )}
               </View>
             ))}
           </View>
@@ -230,6 +330,60 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginLeft: 52, // Align with message content (icon width + margin)
   },
+  messageImage: {
+    width: '100%',
+    height: 150,
+    borderRadius: 16,
+    marginTop: 12,
+    marginLeft: 52,
+    resizeMode: 'cover',
+  },
+  recipeCardContainer: {
+    marginTop: 16,
+    marginLeft: 52,
+    marginRight: 16,
+  },
+  recipeImageWrapper: {
+    width: '100%',
+    height: 300,
+    borderRadius: 24,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#F5F5F5',
+  },
+  recipeCardImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  recipeImagePlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#E0E0E0',
+  },
+  plusButtonOverlay: {
+    position: 'absolute',
+    bottom: 16,
+    right: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F5DA4D', // Yellow color from screenshot
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  recipeCardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginTop: 12,
+    marginLeft: 4,
+  }
 });
 
 export default NotificationsScreen;

@@ -10,7 +10,7 @@ import { useGroceriesStore } from '../../stores/groceriesStore';
 import { useRecipesStore } from '../../stores/recipesStore';
 import { Ingredient } from '../../types/recipe';
 import { GrocerySource } from '../../types/grocery';
-import { SpriteSheetIcon } from '../../components/SpriteSheetIcon';
+import { IngredientIcon } from '../../components/IngredientIcon';
 import { getIngredientSpriteCode } from '../../utils/ingredientMapping';
 
 type IngredientSelectionScreenRouteProp = RouteProp<RootStackParamList, 'IngredientSelection'>;
@@ -118,7 +118,7 @@ const IngredientSelectionScreen: React.FC = () => {
       const selectedForRecipe = ingredients.filter((item) =>
         selectedIngredients.has(`${recipe.id}-${item.ingredient.id}`)
       );
-      
+
       if (selectedForRecipe.length > 0) {
         const currentServings = servings[recipe.id] || recipe.servings || 2;
         const baseServings = recipe.servings || 2;
@@ -128,13 +128,13 @@ const IngredientSelectionScreen: React.FC = () => {
             amount: String(Number(item.ingredient.amount) * (currentServings / baseServings)),
           };
         });
-        
+
         ingredientsToAdd.push(...adjustedIngredients);
         // Create sources array - one source per ingredient from this recipe
         const sources: GrocerySource[] = adjustedIngredients.map((ing) => ({
           recipeId: recipe.id,
           recipeTitle: recipe.title,
-          mealPlanEntryId: mealPlan?.id,
+          mealPlanEntryId: mealPlan?.mealPlanId,
           amount: ing.amount,
         }));
         addItems(adjustedIngredients, recipe.id, recipe.title, currentServings, sources);
@@ -151,10 +151,7 @@ const IngredientSelectionScreen: React.FC = () => {
     // The notification will be handled by MealPlanScreen via navigation listener
     navigation.navigate('Home', {
       screen: 'MealPlan',
-      params: {
-        addedItemsCount: ingredientsToAdd.length,
-      },
-    });
+    } as any);
   };
 
   const adjustServings = (recipeId: string, delta: number) => {
@@ -164,7 +161,7 @@ const IngredientSelectionScreen: React.FC = () => {
     const currentServings = servings[recipeId] || recipe.servings || 2;
     const newServings = Math.max(1, currentServings + delta);
     setServings((prev) => ({ ...prev, [recipeId]: newServings }));
-    
+
     // Update ingredient amounts based on new servings
     const recipeData = recipesWithIngredients.find((r) => r.recipe.id === recipeId);
     if (recipeData) {
@@ -220,7 +217,7 @@ const IngredientSelectionScreen: React.FC = () => {
         {recipesWithIngredients.map(({ recipe, mealPlan, ingredients }) => {
           const currentServings = servings[recipe.id] || recipe.servings || 2;
           const baseServings = recipe.servings || 2;
-          
+
           return (
             <View key={recipe.id} style={styles.recipeSection}>
               {/* Recipe Title and Servings */}
@@ -246,13 +243,13 @@ const IngredientSelectionScreen: React.FC = () => {
                   </TouchableOpacity>
                 </View>
               </View>
-              
+
               {/* Ingredients List for this recipe */}
               {ingredients.map((item) => {
                 const key = `${recipe.id}-${item.ingredient.id}`;
                 const isSelected = selectedIngredients.has(key);
                 const spriteCode = getIngredientSpriteCode(item.ingredient.name);
-                
+
                 // Calculate adjusted amount based on current servings
                 const originalAmount = Number(item.ingredient.amount);
                 const originalServings = recipe.servings || 2;
@@ -267,7 +264,7 @@ const IngredientSelectionScreen: React.FC = () => {
                   >
                     <View style={styles.ingredientIcon}>
                       {spriteCode ? (
-                        <SpriteSheetIcon spriteCode={spriteCode} size={32} />
+                        <IngredientIcon name={item.ingredient.name} type="whole" size="medium" />
                       ) : (
                         <View style={styles.ingredientIconPlaceholder}>
                           <Ionicons name="leaf-outline" size={20} color="#999" />

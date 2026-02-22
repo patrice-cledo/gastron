@@ -46,7 +46,7 @@ export interface ExtendedRecipeEquipment {
 }
 
 // Extended recipe properties for display (not in base Recipe type)
-export interface ExtendedRecipe extends Recipe {
+export interface ExtendedRecipe extends Omit<Recipe, 'equipment'> {
   tags?: string[];
   category?: string;
   rating?: number;

@@ -24,38 +24,7 @@ const CreateScreen: React.FC<CreateScreenProps> = ({ navigation }) => {
     return unsubscribe;
   }, [navigation, showImportModal]);
 
-  const showCameraOptions = () => {
-    // Use requestAnimationFrame to ensure modal is fully closed
-    requestAnimationFrame(() => {
-      if (Platform.OS === 'ios') {
-        ActionSheetIOS.showActionSheetWithOptions(
-          {
-            options: ['Cancel', 'Take Photo', 'Choose from Library'],
-            cancelButtonIndex: 0,
-          },
-          (buttonIndex) => {
-            if (buttonIndex === 1) {
-              handleTakePhoto();
-            } else if (buttonIndex === 2) {
-              handleChooseFromLibrary();
-            }
-          }
-        );
-      } else {
-        // Android
-        Alert.alert(
-          'Select Photo',
-          '',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Take Photo', onPress: handleTakePhoto },
-            { text: 'Choose from Library', onPress: handleChooseFromLibrary },
-          ],
-          { cancelable: true }
-        );
-      }
-    });
-  };
+
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>

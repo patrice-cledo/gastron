@@ -171,8 +171,19 @@ const RecipeDetailScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<RecipeDetailScreenNavigationProp>();
   const route = useRoute<RecipeDetailScreenRouteProp>();
-  const { recipeId } = route.params;
+  const { recipeId, autoOpenMenu } = route.params;
   const [isBookmarked, setIsBookmarked] = useState(false);
+
+  // Auto-open recipe options if requested
+  useEffect(() => {
+    if (autoOpenMenu) {
+      // Small delay to ensure the screen has transitioned smoothly before opening bottom sheet
+      const timer = setTimeout(() => {
+        setShowRecipeOptionsBottomSheet(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [autoOpenMenu]);
   const [servings, setServings] = useState(2);
   const [activeTab, setActiveTab] = useState<'ingredients' | 'equipment' | 'info'>('ingredients');
   const [showMethodBottomSheet, setShowMethodBottomSheet] = useState(false);
@@ -295,7 +306,7 @@ const RecipeDetailScreen: React.FC = () => {
         // 1. Check starter recipes first
         const starterRecipe = starterRecipes.find((r) => r.id === recipeId);
         if (starterRecipe) {
-          setRecipe({ ...starterRecipe, tags: [], category: 'Meat', rating: 4.4, reviewCount: 0 });
+          setRecipe({ ...starterRecipe, tags: [], category: 'Meat', rating: 4.4, reviewCount: 0, chefTips: undefined } as unknown as ExtendedRecipe);
           setIsLoading(false);
           return;
         }
@@ -336,7 +347,7 @@ const RecipeDetailScreen: React.FC = () => {
               category: undefined,
               rating: 4.4,
               reviewCount: 0,
-            };
+            } as unknown as ExtendedRecipe;
             console.log('📋 Local recipe tags after conversion:', extendedRecipe.tags);
             setRecipe(extendedRecipe);
             setIsLoading(false);
@@ -417,7 +428,7 @@ const RecipeDetailScreen: React.FC = () => {
     };
 
     loadRecipe();
-  }, [recipeId, recipes, navigation]);
+  }, [recipeId, navigation]);
 
   // Initialize nutrition state - show nutrition if it exists
   // This hook MUST be called before any early returns
@@ -784,7 +795,7 @@ const RecipeDetailScreen: React.FC = () => {
       mealType: selectedMealType,
       date: selectedDay || '', // Empty string for shelf if no date selected
       includeInGrocery: true,
-      servingsOverride: undefined,
+      servingsOverride: servings,
     };
 
     console.log('📅 Adding recipe to meal plan:', {
@@ -1871,10 +1882,14 @@ const RecipeDetailScreen: React.FC = () => {
                     ]}
                     onPress={() => handleDaySelect(dateStr)}
                   >
-                    <Text style={[
-                      styles.dayButtonText,
-                      isSelected && styles.dayButtonTextSelected
-                    ]}>
+                    <Text
+                      style={[
+                        styles.dayButtonText,
+                        isSelected && styles.dayButtonTextSelected
+                      ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit={true}
+                    >
                       {dayName}
                     </Text>
                   </TouchableOpacity>
@@ -2424,7 +2439,7 @@ const RecipeDetailScreen: React.FC = () => {
                       style={styles.mealTypeItem}
                       onPress={() => {
                         const today = new Date();
-                        const todayDate = today.toISOString().split('T')[0];
+                        const todayDate = formatDateKey(today);
                         const newMealPlan: MealPlanItem = {
                           id: `meal-${Date.now()}`,
                           recipeId: recipe.id,
@@ -2435,6 +2450,7 @@ const RecipeDetailScreen: React.FC = () => {
                           mealType: mealType as 'breakfast' | 'lunch' | 'dinner' | 'snack',
                           date: todayDate,
                           includeInGrocery: true,
+                          servingsOverride: servings,
                         };
 
                         addMealPlan(newMealPlan);
@@ -3642,7 +3658,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 24,
-    gap: 8,
+    gap: 4,
   },
   dayButton: {
     width: 44,

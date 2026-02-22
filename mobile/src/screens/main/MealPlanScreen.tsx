@@ -166,7 +166,7 @@ const MealPlanScreen: React.FC = () => {
     loadMealPlanImageUrls();
   }, [mealPlans]);
 
-  // Listen for navigation params when screen is focused
+  // Listen for navigation params and sync when planner tab is focused (so newly added meals show up)
   useFocusEffect(
     useCallback(() => {
       const params = route.params;
@@ -186,7 +186,11 @@ const MealPlanScreen: React.FC = () => {
         // Clear the param after using it
         navigation.setParams({ weekOffset: undefined });
       }
-    }, [route.params, navigation])
+      // Sync from Firebase when tab gains focus so we show latest data (merge keeps local-only items)
+      if (auth.currentUser) {
+        syncFromFirebase();
+      }
+    }, [route.params, navigation, syncFromFirebase])
   );
 
 

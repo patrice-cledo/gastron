@@ -53,15 +53,15 @@ const MyRecipesScreen: React.FC<MyRecipesScreenProps> = ({ navigation }) => {
   );
 
   const loadCookedRecipes = async () => {
-    try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) return;
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
 
+    try {
       const cookedQuery = query(
         collection(db, 'userCookedRecipes'),
         where('userId', '==', currentUser.uid)
       );
-      
+
       const cookedSnapshot = await getDocs(cookedQuery);
       const cookedIds = new Set<string>();
       cookedSnapshot.forEach((doc) => {
@@ -70,7 +70,7 @@ const MyRecipesScreen: React.FC<MyRecipesScreenProps> = ({ navigation }) => {
           cookedIds.add(data.recipeId);
         }
       });
-      
+
       setCookedRecipeIds(cookedIds);
     } catch (error) {
       console.error('Error loading cooked recipes:', error);
@@ -119,18 +119,18 @@ const MyRecipesScreen: React.FC<MyRecipesScreenProps> = ({ navigation }) => {
   // Group recipes by collection/cookbook (recipes can be in multiple collections)
   const recipesByCollection = React.useMemo(() => {
     const grouped: Record<string, Recipe[]> = {};
-    
+
     // Initialize all collections
     collections.forEach(collection => {
       grouped[collection] = [];
     });
-    
+
     // Group recipes by their collections (a recipe can appear in multiple collections)
     allRecipes.forEach(recipe => {
       // Support both old cookbook format and new collections array format
-      const recipeCollections = (recipe as any).collections || 
+      const recipeCollections = (recipe as any).collections ||
         ((recipe as any).cookbook ? [(recipe as any).cookbook] : []);
-      
+
       if (Array.isArray(recipeCollections) && recipeCollections.length > 0) {
         // Add recipe to each collection it belongs to
         recipeCollections.forEach((collection: string) => {
@@ -151,20 +151,20 @@ const MyRecipesScreen: React.FC<MyRecipesScreenProps> = ({ navigation }) => {
         }
       }
     });
-    
+
     return grouped;
   }, [allRecipes, collections]);
 
   // Get recipes from "Want to cook" collection
   const wantToCookRecipes = recipesByCollection['Want to cook']?.slice(0, 2) || [];
-  
+
   // Get previously cooked recipes (recipes that have been marked as cooked)
   const previouslyCookedRecipes = React.useMemo(() => {
     return allRecipes.filter(recipe => cookedRecipeIds.has(recipe.id)).slice(0, 2);
   }, [allRecipes, cookedRecipeIds]);
 
   const renderRecipeCard = (recipe: any, index: number) => {
-    const isVegetarian = recipe.tags?.some((tag: string) => 
+    const isVegetarian = recipe.tags?.some((tag: string) =>
       tag.toLowerCase().includes('vegetarian') || tag.toLowerCase().includes('vegan')
     );
 
@@ -184,14 +184,14 @@ const MyRecipesScreen: React.FC<MyRecipesScreenProps> = ({ navigation }) => {
               <Ionicons name="restaurant-outline" size={40} color="#CCCCCC" />
             </View>
           )}
-          
+
           {/* Dietary Icon (bottom-left) */}
           {isVegetarian && (
             <View style={styles.dietaryIcon}>
               <Text style={styles.dietaryIconText}>VE</Text>
             </View>
           )}
-          
+
           {/* Plus Button (bottom-right) */}
           <TouchableOpacity
             style={styles.plusButton}
@@ -204,7 +204,7 @@ const MyRecipesScreen: React.FC<MyRecipesScreenProps> = ({ navigation }) => {
             <Ionicons name="add" size={20} color="#1A1A1A" />
           </TouchableOpacity>
         </View>
-        
+
         {/* Recipe Title */}
         <Text style={styles.recipeTitle} numberOfLines={2}>
           {recipe.title}
@@ -228,7 +228,7 @@ const MyRecipesScreen: React.FC<MyRecipesScreenProps> = ({ navigation }) => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Want to cook</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.viewAllButton}
               onPress={() => navigation.navigate('WantToCook')}
             >
@@ -250,7 +250,7 @@ const MyRecipesScreen: React.FC<MyRecipesScreenProps> = ({ navigation }) => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Previously cooked</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.viewAllButton}
               onPress={() => {
                 // TODO: Navigate to previously cooked recipes screen
@@ -275,12 +275,12 @@ const MyRecipesScreen: React.FC<MyRecipesScreenProps> = ({ navigation }) => {
           .filter(collection => collection !== 'Want to cook')
           .map(collection => {
             const collectionRecipes = recipesByCollection[collection] || [];
-            
+
             return (
               <View key={collection} style={styles.section}>
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>{collection}</Text>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={styles.viewAllButton}
                     onPress={() => {
                       // TODO: Navigate to collection detail screen
@@ -322,16 +322,16 @@ const MyRecipesScreen: React.FC<MyRecipesScreenProps> = ({ navigation }) => {
                   <View style={styles.recipeOptionsImageContainer}>
                     {selectedRecipeForOptions.image ? (
                       typeof selectedRecipeForOptions.image === 'string' ? (
-                        <Image 
-                          source={{ uri: selectedRecipeForOptions.image }} 
-                          style={styles.recipeOptionsImage} 
-                          resizeMode="cover" 
+                        <Image
+                          source={{ uri: selectedRecipeForOptions.image }}
+                          style={styles.recipeOptionsImage}
+                          resizeMode="cover"
                         />
                       ) : (
-                        <Image 
-                          source={selectedRecipeForOptions.image} 
-                          style={styles.recipeOptionsImage} 
-                          resizeMode="cover" 
+                        <Image
+                          source={selectedRecipeForOptions.image}
+                          style={styles.recipeOptionsImage}
+                          resizeMode="cover"
                         />
                       )
                     ) : (
@@ -460,21 +460,21 @@ const MyRecipesScreen: React.FC<MyRecipesScreenProps> = ({ navigation }) => {
                           id: `meal-${Date.now()}`,
                           recipeId: selectedRecipeForOptions.id,
                           recipeTitle: selectedRecipeForOptions.title,
-                          recipeImage: typeof selectedRecipeForOptions.image === 'string' 
-                            ? selectedRecipeForOptions.image 
+                          recipeImage: typeof selectedRecipeForOptions.image === 'string'
+                            ? selectedRecipeForOptions.image
                             : undefined,
                           mealType: mealType as 'breakfast' | 'lunch' | 'dinner' | 'snack',
                           date: today,
                           includeInGrocery: true,
                         };
-                        
+
                         addMealPlan(newMealPlan);
 
                         // Automatically add ingredients to groceries list if includeInGrocery is true
                         if (newMealPlan.includeInGrocery && selectedRecipeForOptions.ingredients && selectedRecipeForOptions.ingredients.length > 0) {
                           const recipeServings = selectedRecipeForOptions.servings || 4;
                           const targetServings = newMealPlan.servingsOverride || recipeServings;
-                          
+
                           // Adjust ingredients based on servings
                           const adjustedIngredients = selectedRecipeForOptions.ingredients.map(ing => ({
                             ...ing,
@@ -492,12 +492,12 @@ const MyRecipesScreen: React.FC<MyRecipesScreenProps> = ({ navigation }) => {
                           addItems(adjustedIngredients, selectedRecipeForOptions.id, selectedRecipeForOptions.title, targetServings, sources);
                           console.log('🛒 Added ingredients to groceries list:', adjustedIngredients.length);
                         }
-                        
+
                         // Show success toast
                         setToastMessage(`${selectedRecipeForOptions.title} added to planner`);
                         setToastType('success');
                         setToastVisible(true);
-                        
+
                         setShowRecipeOptionsBottomSheet(false);
                         setShowMealTypeSelection(false);
                       }}

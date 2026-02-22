@@ -120,16 +120,18 @@ export const useMealPlanStore = create<MealPlanState>()(
           console.log('Cannot sync meal plans: user not authenticated');
           return;
         }
-        
+        // Capture current state BEFORE any await so we don't lose locally-added items
+        // (e.g. persist rehydration can overwrite state during the async fetch)
+        const currentPlans = get().mealPlans;
         set({ isLoading: true });
         try {
           const firebaseMealPlans = await loadMealPlansFromFirebase();
+          const firebaseIds = new Set(firebaseMealPlans.map((p) => p.id));
+          // Keep locally-added items that aren't in Firebase yet (e.g. just added, or shelf/unscheduled items that don't sync)
+          const localOnly = currentPlans.filter((p) => !firebaseIds.has(p.id));
+          const merged = [...firebaseMealPlans, ...localOnly];
           
-          // Enrich with recipe data from local store
-          const { enrichMealPlansWithRecipes } = get();
-          enrichMealPlansWithRecipes([]); // Will be called with recipes from component
-          
-          set({ mealPlans: firebaseMealPlans, isLoading: false });
+          set({ mealPlans: merged, isLoading: false });
           console.log('✅ Synced meal plans from Firebase');
         } catch (error) {
           console.error('❌ Error syncing meal plans from Firebase:', error);
@@ -158,6 +160,17 @@ export const useMealPlanStore = create<MealPlanState>()(
     {
       name: 'meal-plan-storage',
       storage: createJSONStorage(() => AsyncStorage),
+      // Don't persist mealPlans: when logged in Firebase is source of truth. Persisting
+      // caused AsyncStorage to overwrite loaded Firebase data so the meal plan screen stayed empty.
+      partialize: (state) => ({
+        isLoading: state.isLoading,
+        isSyncing: state.isSyncing,
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (auth.currentUser) {
+          useMealPlanStore.getState().syncFromFirebase();
+        }
+      },
     }
   )
 );

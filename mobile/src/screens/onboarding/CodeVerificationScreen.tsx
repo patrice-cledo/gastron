@@ -24,7 +24,7 @@ const CodeVerificationScreen: React.FC<CodeVerificationScreenProps> = ({ navigat
   const route = useRoute<CodeVerificationScreenRouteProp>();
   const email = route.params?.email || '';
   const firstName = route.params?.firstName || '';
-  const nextScreen = route.params?.nextScreen ?? 'Home';
+  const nextScreen = (route.params?.nextScreen as string) ?? 'Home';
   const challengeId = route.params?.challengeId;
   const isSignup = nextScreen === 'Pricing'; // used for API: send firstName only on signup
 
@@ -46,7 +46,7 @@ const CodeVerificationScreen: React.FC<CodeVerificationScreenProps> = ({ navigat
   const handleCodeChange = (text: string, index: number) => {
     // Only allow digits
     const numericText = text.replace(/[^0-9]/g, '');
-    
+
     if (numericText.length > 1) {
       // Handle paste: fill multiple inputs
       const digits = numericText.slice(0, 6).split('');
@@ -57,7 +57,7 @@ const CodeVerificationScreen: React.FC<CodeVerificationScreenProps> = ({ navigat
         }
       });
       setCode(newCode);
-      
+
       // Focus the next empty input or the last one
       const nextIndex = Math.min(index + digits.length, 5);
       inputRefs.current[nextIndex]?.focus();
@@ -93,7 +93,7 @@ const CodeVerificationScreen: React.FC<CodeVerificationScreenProps> = ({ navigat
 
   const handleVerify = async () => {
     const codeString = code.join('');
-    
+
     if (!codeString || codeString.length !== 6) {
       Alert.alert('Invalid Code', 'Please enter a 6-digit code.');
       return;
@@ -147,12 +147,12 @@ const CodeVerificationScreen: React.FC<CodeVerificationScreenProps> = ({ navigat
       );
     } catch (error: any) {
       setIsVerifying(false);
-      
+
       console.error('OTP verification error:', error);
       console.error('Error code:', error?.code);
       console.error('Error message:', error?.message);
       console.error('Full error:', JSON.stringify(error, null, 2));
-      
+
       let errorMessage = 'Invalid code. Please try again.';
       if (error?.code === 'invalid-argument') {
         errorMessage = error.message || 'Invalid code format.';
@@ -169,7 +169,7 @@ const CodeVerificationScreen: React.FC<CodeVerificationScreenProps> = ({ navigat
       }
 
       Alert.alert('Verification Failed', errorMessage);
-      
+
       // Clear code on error
       setCode(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
@@ -191,7 +191,7 @@ const CodeVerificationScreen: React.FC<CodeVerificationScreenProps> = ({ navigat
 
     try {
       console.log('Resending OTP for email:', email.trim().toLowerCase());
-      
+
       // Call requestEmailOtp Cloud Function again
       const requestEmailOtp = httpsCallable(functions, 'requestEmailOtp');
       const result = await requestEmailOtp({
@@ -202,23 +202,23 @@ const CodeVerificationScreen: React.FC<CodeVerificationScreenProps> = ({ navigat
 
       setIsResending(false);
       setResendCooldown(60); // 60 second cooldown
-      
+
       // Update challengeId in state
       setCurrentChallengeId(result.data.challengeId);
-      
+
       Alert.alert('Code Sent', 'A new code has been sent to your email.');
-      
+
       // Clear current code
       setCode(['', '', '', '', '', '']);
       inputRefs.current[0]?.focus();
     } catch (error: any) {
       setIsResending(false);
-      
+
       console.error('Resend error:', error);
       console.error('Error code:', error?.code);
       console.error('Error message:', error?.message);
       console.error('Full error:', JSON.stringify(error, null, 2));
-      
+
       let errorMessage = 'Failed to resend code. Please try again.';
       if (error?.code === 'invalid-argument') {
         errorMessage = error.message || 'Invalid email address.';
@@ -266,7 +266,7 @@ const CodeVerificationScreen: React.FC<CodeVerificationScreenProps> = ({ navigat
 
           {/* Instruction Text */}
           <Text style={styles.instructionText}>We sent a magic code to</Text>
-          
+
           {/* Email Display */}
           <View style={styles.emailContainer}>
             <Ionicons name="mail" size={16} color="#1A1A1A" />
@@ -326,7 +326,7 @@ const CodeVerificationScreen: React.FC<CodeVerificationScreenProps> = ({ navigat
               styles.resendText,
               resendCooldown > 0 && styles.resendTextDisabled
             ]}>
-              {resendCooldown > 0 
+              {resendCooldown > 0
                 ? `Resend code (${resendCooldown}s)`
                 : 'Resend code'}
             </Text>

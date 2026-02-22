@@ -88,6 +88,7 @@ import StarterRecipesScreen from './src/screens/recipes/StarterRecipesScreen';
 import TrendingRecipesScreen from './src/screens/recipes/TrendingRecipesScreen';
 import SearchScreen from './src/screens/recipes/SearchScreen';
 import IngredientSearchScreen from './src/screens/recipes/IngredientSearchScreen';
+import RecipeCollectionScreen from './src/screens/recipes/RecipeCollectionScreen';
 
 // Main screens
 import ChooseRecipesScreen from './src/screens/main/ChooseRecipesScreen';
@@ -530,6 +531,13 @@ function AppContent() {
                   <Stack.Screen
                     name="Search"
                     component={SearchScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="RecipeCollection"
+                    component={RecipeCollectionScreen}
                     options={{
                       contentStyle: { backgroundColor: '#FFFFFF' },
                     }}

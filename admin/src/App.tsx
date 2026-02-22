@@ -7,6 +7,7 @@ import { Recipes } from './pages/Recipes';
 import { IconMapping } from './pages/IconMapping';
 import { RecipeSources } from './pages/RecipeSources';
 import { Challenges } from './pages/Challenges';
+import { Notifications } from './pages/Notifications';
 import { Login } from './pages/Login';
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -69,6 +70,9 @@ function Layout() {
           <NavLink to="/recipe-sources" className={navLinkClass}>
             Recipe sources
           </NavLink>
+          <NavLink to="/notifications" className={navLinkClass}>
+            Notifications
+          </NavLink>
         </nav>
         <div className="p-2 border-t border-gray-200">
           <button
@@ -96,6 +100,7 @@ export default function App() {
         <Route path="icon-mapping" element={<IconMapping />} />
         <Route path="challenges" element={<Challenges />} />
         <Route path="recipe-sources" element={<RecipeSources />} />
+        <Route path="notifications" element={<Notifications />} />
       </Route>
     </Routes>
   );

@@ -69,7 +69,7 @@ const RecipeInfoScreen: React.FC = () => {
       servings: servings ? parseInt(servings, 10) : undefined,
       prepTime: prepTime ? parseInt(prepTime, 10) : undefined,
       cookTime: cookTime ? parseInt(cookTime, 10) : undefined,
-      cuisine,
+      cuisine: cuisine || undefined,
       tags,
       sourceUrls,
       description: description.trim() || undefined,
@@ -318,8 +318,8 @@ const RecipeInfoScreen: React.FC = () => {
                 <Ionicons name="close" size={24} color="#1A1A1A" />
               </TouchableOpacity>
             </View>
-            <ScrollView 
-              style={styles.tagsList} 
+            <ScrollView
+              style={styles.tagsList}
               contentContainerStyle={styles.tagsListContent}
               showsVerticalScrollIndicator={false}
             >

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { NativeStackNavigationProp, RouteProp } from '@react-navigation/native-stack';
-import { useRoute } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useRoute, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeProvider';
@@ -71,7 +71,7 @@ const HelpNeededScreen: React.FC<HelpNeededScreenProps> = ({ navigation }) => {
   const renderHelpButton = (help: HelpOption) => {
     const isSelected = selectedHelp.includes(help.id);
     const displayText = help.id === 'other' && otherResponse ? otherResponse : help.label;
-    
+
     return (
       <TouchableOpacity
         key={help.id}
@@ -82,10 +82,10 @@ const HelpNeededScreen: React.FC<HelpNeededScreenProps> = ({ navigation }) => {
         onPress={() => handleHelpToggle(help.id)}
         activeOpacity={0.7}
       >
-        <Ionicons 
-          name={help.icon as any} 
-          size={24} 
-          color={isSelected ? '#1A1A1A' : '#1A1A1A'} 
+        <Ionicons
+          name={help.icon as any}
+          size={24}
+          color={isSelected ? '#1A1A1A' : '#1A1A1A'}
         />
         <Text style={[
           styles.helpText,
@@ -116,7 +116,7 @@ const HelpNeededScreen: React.FC<HelpNeededScreenProps> = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >

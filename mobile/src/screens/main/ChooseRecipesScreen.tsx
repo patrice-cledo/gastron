@@ -18,7 +18,7 @@ const ChooseRecipesScreen: React.FC = () => {
   const { mealPlans } = useMealPlanStore();
   const { recipes: savedRecipes } = useRecipesStore();
   const [selectedMealPlans, setSelectedMealPlans] = useState<Set<string>>(new Set());
-  
+
   // Pre-select meal plans if provided
   useEffect(() => {
     const preSelectedIds = route.params?.preSelectedMealPlanIds;
@@ -39,7 +39,7 @@ const ChooseRecipesScreen: React.FC = () => {
     const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
     const monday = new Date(today);
     monday.setDate(today.getDate() + diff);
-    
+
     const week = [];
     for (let i = 0; i < 7; i++) {
       const date = new Date(monday);
@@ -111,7 +111,7 @@ const ChooseRecipesScreen: React.FC = () => {
   };
 
   const allMealPlans = useMemo(() => {
-    const plans: Array<MealPlanItem & { date: Date }> = [];
+    const plans: Array<Omit<MealPlanItem, 'date'> & { date: Date }> = [];
     weekDates.forEach((date) => {
       const dayPlans = getMealPlansForDay(date);
       dayPlans.forEach((plan) => {

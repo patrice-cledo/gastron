@@ -5,7 +5,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeProvider';
-import { SpriteSheetIcon } from '../../components/SpriteSheetIcon';
+import { IngredientIcon } from '../../components/IngredientIcon';
 import { getIngredientSpriteCode } from '../../utils/ingredientMapping';
 
 
@@ -70,9 +70,9 @@ const IngredientsScreen: React.FC<IngredientsScreenProps> = ({ navigation }) => 
 
   const renderIngredientButton = (ingredient: IngredientOption) => {
     const isSelected = selectedIngredients.includes(ingredient.id);
-    
+
     const spriteCode = ingredient.useSprite ? getIngredientSpriteCode(ingredient.label) : null;
-    
+
     return (
       <TouchableOpacity
         key={ingredient.id}
@@ -84,12 +84,12 @@ const IngredientsScreen: React.FC<IngredientsScreenProps> = ({ navigation }) => 
         activeOpacity={0.7}
       >
         {spriteCode ? (
-          <SpriteSheetIcon spriteCode={spriteCode} size={24} />
+          <IngredientIcon name={ingredient.label} type="whole" size="small" />
         ) : (
-          <Ionicons 
-            name={ingredient.icon as any || 'restaurant'} 
-            size={20} 
-            color="#1A1A1A" 
+          <Ionicons
+            name={ingredient.icon as any || 'restaurant'}
+            size={20}
+            color="#1A1A1A"
           />
         )}
         <Text style={[
@@ -121,7 +121,7 @@ const IngredientsScreen: React.FC<IngredientsScreenProps> = ({ navigation }) => 
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >

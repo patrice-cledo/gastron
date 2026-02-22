@@ -37,7 +37,7 @@ try {
     user: { subscriptionStatus: 'UNKNOWN' },
   });
   usePlacement = () => ({
-    registerPlacement: async () => {},
+    registerPlacement: async () => { },
     state: { status: 'idle' },
   });
 }
@@ -51,16 +51,16 @@ const PhotoImportScreen: React.FC<PhotoImportScreenProps> = ({ navigation }) => 
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const { 
-    status, 
-    uploadProgress, 
-    error, 
-    startPhotoImport, 
-    cancelImport, 
+  const {
+    status,
+    uploadProgress,
+    error,
+    startPhotoImport,
+    cancelImport,
     reset,
-    currentImportId 
+    currentImportId
   } = usePhotoImportStore();
-  
+
   // Import limit tracking
   const superwall = useSuperwall();
   const placement = usePlacement('trial-offer');
@@ -136,8 +136,8 @@ const PhotoImportScreen: React.FC<PhotoImportScreenProps> = ({ navigation }) => 
         error,
         [
           { text: 'OK', onPress: () => reset() },
-          { 
-            text: 'Try Again', 
+          {
+            text: 'Try Again',
             onPress: () => {
               reset();
               if (selectedImage) {
@@ -159,7 +159,7 @@ const PhotoImportScreen: React.FC<PhotoImportScreenProps> = ({ navigation }) => 
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaType.Images,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         quality: 0.85, // Compress for upload
         aspect: [3, 4], // Vertical/portrait frame
@@ -183,7 +183,7 @@ const PhotoImportScreen: React.FC<PhotoImportScreenProps> = ({ navigation }) => 
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaType.Images,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         quality: 0.85, // Compress for upload
         aspect: [3, 4], // Vertical/portrait frame
@@ -231,20 +231,20 @@ const PhotoImportScreen: React.FC<PhotoImportScreenProps> = ({ navigation }) => 
     try {
       setIsLoadingUpgrade(true);
       console.log('🎯 Attempting to present Superwall paywall for placement: trial-offer');
-      
+
       // Show Superwall paywall using registerPlacement
       await placement.registerPlacement({
         placement: 'trial-offer',
       });
-      
+
       console.log('✅ Superwall paywall presentation completed');
-      
+
       // Check if user successfully subscribed after paywall
       const subscribed = hasActiveSubscription(superwall);
-      
+
       // Close the upgrade bottom sheet
       setShowUpgradeBottomSheet(false);
-      
+
       // If subscribed, refresh import count
       if (subscribed) {
         console.log('✅ User successfully subscribed');
@@ -330,8 +330,8 @@ const PhotoImportScreen: React.FC<PhotoImportScreenProps> = ({ navigation }) => 
         'Are you sure you want to cancel this import?',
         [
           { text: 'No', style: 'cancel' },
-          { 
-            text: 'Yes', 
+          {
+            text: 'Yes',
             style: 'destructive',
             onPress: () => {
               cancelImport();
@@ -379,7 +379,7 @@ const PhotoImportScreen: React.FC<PhotoImportScreenProps> = ({ navigation }) => 
         ) : (
           <View style={styles.imageContainer}>
             <Image source={{ uri: selectedImage }} style={styles.previewImage} resizeMode="contain" />
-            
+
             {!isProcessing && (
               <View style={styles.actionsContainer}>
                 <TouchableOpacity
@@ -390,7 +390,7 @@ const PhotoImportScreen: React.FC<PhotoImportScreenProps> = ({ navigation }) => 
                   <Ionicons name="swap-horizontal-outline" size={20} color="#1A1A1A" />
                   <Text style={styles.changeButtonText}>Change Photo</Text>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity
                   style={[styles.importButton, { backgroundColor: theme.colors.accent }]}
                   onPress={handleStartImport}

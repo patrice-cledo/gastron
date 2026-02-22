@@ -10,7 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ingredient } from '../types/recipe';
-import { SpriteSheetIcon } from './SpriteSheetIcon';
+import { IngredientIcon } from './IngredientIcon';
 import { getIngredientSpriteCode } from '../utils/ingredientMapping';
 
 interface AddItemsModalProps {
@@ -29,7 +29,7 @@ const AddItemsModal: React.FC<AddItemsModalProps> = ({
   recipeTitle,
 }) => {
   const insets = useSafeAreaInsets();
-  
+
   // Initialize selectedIds when ingredients change or modal opens
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [servings, setServings] = useState(4);
@@ -159,8 +159,8 @@ const AddItemsModal: React.FC<AddItemsModalProps> = ({
                 ingredients.map((ingredient) => {
                   const isSelected = selectedIds.has(ingredient.id);
                   const spriteCode = getIngredientSpriteCode(ingredient.name);
-                  const displayAmount = servings === 4 
-                    ? ingredient.amount 
+                  const displayAmount = servings === 4
+                    ? ingredient.amount
                     : calculateAdjustedAmount(ingredient.amount, servings, 4);
 
                   return (
@@ -169,7 +169,7 @@ const AddItemsModal: React.FC<AddItemsModalProps> = ({
                       style={styles.ingredientRow}
                       onPress={() => toggleIngredient(ingredient.id)}
                     >
-                      <SpriteSheetIcon spriteCode={spriteCode} size={40} checked={isSelected} />
+                      <IngredientIcon name={ingredient.name} type="whole" size="large" checked={isSelected} />
                       <View style={styles.ingredientContent}>
                         <Text style={styles.ingredientText}>
                           {displayAmount} {ingredient.unit || ''} {ingredient.name}
@@ -238,14 +238,14 @@ const calculateAdjustedAmount = (
 
   const formatFraction = (value: number): string => {
     if (value === 0) return '0';
-    
+
     const whole = Math.floor(value);
     const fractional = value - whole;
-    
+
     if (fractional === 0) {
       return whole.toString();
     }
-    
+
     // Common fractions
     const commonFractions: Record<number, string> = {
       0.125: '1/8',
@@ -255,7 +255,7 @@ const calculateAdjustedAmount = (
       0.667: '2/3',
       0.75: '3/4',
     };
-    
+
     // Check if fractional part matches a common fraction
     for (const [dec, frac] of Object.entries(commonFractions)) {
       if (Math.abs(fractional - parseFloat(dec)) < 0.01) {
@@ -265,7 +265,7 @@ const calculateAdjustedAmount = (
         return `${whole} ${frac}`;
       }
     }
-    
+
     // Round to 2 decimal places if not a common fraction
     const rounded = Math.round(fractional * 100) / 100;
     if (whole === 0) {
@@ -277,7 +277,7 @@ const calculateAdjustedAmount = (
   const originalAmount = parseFraction(amount);
   const multiplier = newServings / originalServings;
   const newAmount = originalAmount * multiplier;
-  
+
   return formatFraction(newAmount);
 };
 
@@ -438,6 +438,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 20,
     alignItems: 'center',
+  },
+  addButtonDisabled: {
+    backgroundColor: '#E0E0DA',
   },
   addButtonText: {
     fontSize: 16,
