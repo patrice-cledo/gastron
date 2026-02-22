@@ -7,7 +7,6 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useRecipesStore } from '../../stores/recipesStore';
-import { sampleRecipe } from '../../data/sampleRecipe';
 
 type WantToCookScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'WantToCook'>;
 
@@ -16,14 +15,7 @@ const WantToCookScreen: React.FC = () => {
   const navigation = useNavigation<WantToCookScreenNavigationProp>();
   const { recipes } = useRecipesStore();
 
-  // Restore images for recipes that lost them during persistence (require() results can't be serialized to JSON)
-  const allRecipes = (recipes.length > 0 ? recipes : [sampleRecipe]).map(recipe => {
-    // For sample recipe, always use the fresh image from sampleRecipe (it gets lost during JSON serialization)
-    if (recipe.id === sampleRecipe.id) {
-      return { ...recipe, image: sampleRecipe.image };
-    }
-    return recipe;
-  });
+  const allRecipes = recipes;
 
   const handleRecipePress = (recipeId: string) => {
     navigation.navigate('RecipeDetail', { recipeId });

@@ -4,8 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../types/navigation';
-import { starterRecipes } from '../../data/starterRecipes';
+import { RootStackParamList } from '../../types/navigation'; 
 import { useGroceriesStore } from '../../stores/groceriesStore';
 import { useRecipesStore } from '../../stores/recipesStore';
 import { Ingredient } from '../../types/recipe';
@@ -34,7 +33,7 @@ const IngredientSelectionScreen: React.FC = () => {
 
   // Combine starter recipes and saved recipes
   const allRecipes = useMemo(() => {
-    return [...starterRecipes, ...savedRecipes];
+    return [...savedRecipes];
   }, [savedRecipes]);
 
   // Group ingredients by recipe

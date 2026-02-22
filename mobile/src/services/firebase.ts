@@ -1,5 +1,12 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth, connectAuthEmulator, Auth } from 'firebase/auth';
+import {
+  getAuth,
+  initializeAuth,
+  getReactNativePersistence,
+  connectAuthEmulator,
+  Auth,
+} from '@firebase/auth';
 import { getFirestore, connectFirestoreEmulator, Firestore } from 'firebase/firestore';
 import { getFunctions, connectFunctionsEmulator, Functions } from 'firebase/functions';
 import { getStorage, connectStorageEmulator, FirebaseStorage } from 'firebase/storage';
@@ -25,8 +32,16 @@ if (getApps().length === 0) {
   console.log('🔥 Using existing Firebase app, projectId:', app.options.projectId);
 }
 
-// Initialize Auth
-export const auth: Auth = getAuth(app);
+// Initialize Auth with React Native persistence so login survives app restarts
+let auth: Auth;
+if (getApps().length === 0) {
+  auth = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+} else {
+  auth = getAuth(app);
+}
+export { auth };
 
 // Initialize Firestore
 export const db: Firestore = getFirestore(app);
@@ -38,9 +53,10 @@ export const functions: Functions = getFunctions(app);
 // Initialize Storage
 export const storage: FirebaseStorage = getStorage(app);
 
-// Connect to emulators in development
-// In React Native, we need to check if we're in development mode
-const USE_EMULATOR = process.env.NODE_ENV !== 'production' || __DEV__;
+// Connect to emulators only when in dev and not explicitly disabled (e.g. for device testing with cloud Firebase)
+const USE_EMULATOR =
+  (process.env.NODE_ENV !== 'production' || __DEV__) &&
+  process.env.EXPO_PUBLIC_USE_FIREBASE_EMULATOR !== 'false';
 
 if (USE_EMULATOR) {
   try {

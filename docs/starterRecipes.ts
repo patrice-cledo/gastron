@@ -1,4 +1,4 @@
-import { Recipe } from '../types/recipe';
+import { Recipe } from '../mobile/src/types/recipe';
 
 export const starterRecipes: Recipe[] = [
   {

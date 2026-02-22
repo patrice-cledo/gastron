@@ -13,7 +13,6 @@ import { useGroceriesStore } from '../../stores/groceriesStore';
 import { GrocerySource } from '../../types/grocery';
 import { useCollectionsStore } from '../../stores/collectionsStore';
 import { useModal } from '../../context/ModalContext';
-import { sampleRecipe } from '../../data/sampleRecipe';
 import { BottomSheet } from '../../components/BottomSheet';
 import { Toast } from '../../components/Toast';
 import { Recipe } from '../../types/recipe';
@@ -100,13 +99,7 @@ const MyRecipesScreen: React.FC<MyRecipesScreenProps> = ({ navigation }) => {
     return today.toISOString().split('T')[0];
   };
 
-  // Restore images for recipes that lost them during persistence
-  const allRecipes = (recipes.length > 0 ? recipes : [sampleRecipe]).map(recipe => {
-    if (recipe.id === sampleRecipe.id) {
-      return { ...recipe, image: sampleRecipe.image };
-    }
-    return recipe;
-  });
+  const allRecipes = recipes;
 
   const screenWidth = Dimensions.get('window').width;
   const padding = 20;
@@ -228,11 +221,8 @@ const MyRecipesScreen: React.FC<MyRecipesScreenProps> = ({ navigation }) => {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Want to cook</Text>
-            <TouchableOpacity
-              style={styles.viewAllButton}
-              onPress={() => navigation.navigate('WantToCook')}
-            >
-              <Ionicons name="arrow-forward" size={16} color="#1A1A1A" />
+            <TouchableOpacity onPress={() => navigation.navigate('WantToCook')}>
+              <Text style={styles.viewAllLinkText}>View all</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.recipesRow}>
@@ -251,12 +241,14 @@ const MyRecipesScreen: React.FC<MyRecipesScreenProps> = ({ navigation }) => {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Previously cooked</Text>
             <TouchableOpacity
-              style={styles.viewAllButton}
-              onPress={() => {
-                // TODO: Navigate to previously cooked recipes screen
-              }}
+              onPress={() =>
+                navigation.navigate('RecipeCollection', {
+                  title: 'Previously cooked',
+                  recipeIds: Array.from(cookedRecipeIds),
+                })
+              }
             >
-              <Ionicons name="arrow-forward" size={16} color="#1A1A1A" />
+              <Text style={styles.viewAllLinkText}>View all</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.recipesRow}>
@@ -281,12 +273,14 @@ const MyRecipesScreen: React.FC<MyRecipesScreenProps> = ({ navigation }) => {
                 <View style={styles.sectionHeader}>
                   <Text style={styles.sectionTitle}>{collection}</Text>
                   <TouchableOpacity
-                    style={styles.viewAllButton}
-                    onPress={() => {
-                      // TODO: Navigate to collection detail screen
-                    }}
+                    onPress={() =>
+                      navigation.navigate('RecipeCollection', {
+                        title: collection,
+                        recipeIds: collectionRecipes.map(r => r.id),
+                      })
+                    }
                   >
-                    <Ionicons name="arrow-forward" size={16} color="#1A1A1A" />
+                    <Text style={styles.viewAllLinkText}>View all</Text>
                   </TouchableOpacity>
                 </View>
                 <View style={styles.recipesRow}>
@@ -563,6 +557,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#1A1A1A',
+  },
+  viewAllLinkText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1A1A1A',
+    textDecorationLine: 'underline',
   },
   viewAllButton: {
     width: 32,

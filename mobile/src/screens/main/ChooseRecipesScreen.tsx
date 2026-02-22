@@ -1,13 +1,13 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../../types/navigation';
-import { starterRecipes } from '../../data/starterRecipes';
+import { RootStackParamList } from '../../types/navigation'; 
 import { useMealPlanStore, MealPlanItem } from '../../stores/mealPlanStore';
 import { useRecipesStore } from '../../stores/recipesStore';
+import { auth } from '../../services/firebase';
 
 type ChooseRecipesScreenRouteProp = RouteProp<RootStackParamList, 'ChooseRecipes'>;
 type ChooseRecipesScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'ChooseRecipes'>;
@@ -15,9 +15,18 @@ type ChooseRecipesScreenNavigationProp = NativeStackNavigationProp<RootStackPara
 const ChooseRecipesScreen: React.FC = () => {
   const navigation = useNavigation<ChooseRecipesScreenNavigationProp>();
   const route = useRoute<ChooseRecipesScreenRouteProp>();
-  const { mealPlans } = useMealPlanStore();
+  const { mealPlans, syncFromFirebase } = useMealPlanStore();
   const { recipes: savedRecipes } = useRecipesStore();
   const [selectedMealPlans, setSelectedMealPlans] = useState<Set<string>>(new Set());
+
+  // Sync meal plans from Firebase when screen is focused so the list is populated
+  useFocusEffect(
+    useCallback(() => {
+      if (auth.currentUser) {
+        syncFromFirebase();
+      }
+    }, [syncFromFirebase])
+  );
 
   // Pre-select meal plans if provided
   useEffect(() => {
@@ -29,7 +38,7 @@ const ChooseRecipesScreen: React.FC = () => {
 
   // Combine starter recipes and saved recipes
   const allRecipes = useMemo(() => {
-    return [...starterRecipes, ...savedRecipes];
+    return [...savedRecipes];
   }, [savedRecipes]);
 
   // Get current week dates
@@ -52,7 +61,10 @@ const ChooseRecipesScreen: React.FC = () => {
   const weekDates = getWeekDates();
 
   const getDateKey = (date: Date): string => {
-    return date.toISOString().split('T')[0];
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const getMealPlansForDay = (date: Date): MealPlanItem[] => {

@@ -1,28 +1,28 @@
 /**
  * Photo Import Cloud Functions
- * 
+ *
  * Functions:
  * - startPhotoImport: Callable function to start photo import job
  * - processPhotoImport: Background function triggered by Firestore to process photo import
  */
 
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
-import { onDocumentCreated } from 'firebase-functions/v2/firestore';
-import * as admin from 'firebase-admin';
-import { ImageAnnotatorClient } from '@google-cloud/vision';
+import {onCall, HttpsError} from "firebase-functions/v2/https";
+import {onDocumentCreated} from "firebase-functions/v2/firestore";
+import * as admin from "firebase-admin";
+import {ImageAnnotatorClient} from "@google-cloud/vision";
 import {
   ImportJob,
   ErrorCode,
   COLLECTIONS,
-} from '../../shared/types';
-import { parseRecipeFromText } from '../../shared/textRecipeParser';
+} from "../../shared/types";
+import {parseRecipeFromText} from "../../shared/textRecipeParser";
 
 // Configuration
 const MAX_IMAGE_SIZE = 6 * 1024 * 1024; // 6 MB
 // For local development, use a much higher limit
-const MAX_PHOTO_IMPORTS_PER_DAY = process.env.FUNCTIONS_EMULATOR 
-  ? 1000 // Very high limit for local development
-  : 5; // Rate limit for free tier in production
+const MAX_PHOTO_IMPORTS_PER_DAY = process.env.FUNCTIONS_EMULATOR ?
+  1000 : // Very high limit for local development
+  5; // Rate limit for free tier in production
 // const MAX_PHOTO_IMPORTS_PER_DAY_PREMIUM = 100; // Rate limit for premium (TODO: implement tier checking)
 
 // Initialize Vision API client
@@ -40,51 +40,51 @@ interface StartPhotoImportRequest {
 
 /**
  * Start photo import job
- * 
+ *
  * Creates an import job and triggers background processing
  */
 export const startPhotoImport = onCall(
-  { enforceAppCheck: false, maxInstances: 10 },
+  {enforceAppCheck: false, maxInstances: 10},
   async (request) => {
     // Verify authentication
     if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'User must be authenticated');
+      throw new HttpsError("unauthenticated", "User must be authenticated");
     }
 
     const userId = request.auth.uid;
     const data = request.data as StartPhotoImportRequest;
-    const { storagePath } = data;
+    const {storagePath} = data;
 
-    if (!storagePath || typeof storagePath !== 'string') {
-      throw new HttpsError('invalid-argument', 'storagePath is required');
+    if (!storagePath || typeof storagePath !== "string") {
+      throw new HttpsError("invalid-argument", "storagePath is required");
     }
 
     // Validate storage path belongs to user
     if (!storagePath.startsWith(`imports/${userId}/`)) {
       throw new HttpsError(
-        'permission-denied',
-        'Storage path must belong to the authenticated user'
+        "permission-denied",
+        "Storage path must belong to the authenticated user"
       );
     }
 
     // Check if file exists and get size
     // Explicitly specify bucket name for emulator compatibility
-    const bucketName = process.env.STORAGE_BUCKET || 'cookthispage.appspot.com';
+    const bucketName = process.env.STORAGE_BUCKET || "cookthispage.appspot.com";
     const bucket = admin.storage().bucket(bucketName);
     const file = bucket.file(storagePath);
-    
+
     console.log(`🔍 Checking file in bucket: ${bucketName}, path: ${storagePath}`);
-    
+
     try {
       const [exists] = await file.exists();
-      
+
       if (exists) {
         const [metadata] = await file.getMetadata();
-        const fileSize = parseInt(String(metadata.size || '0'), 10);
-        
+        const fileSize = parseInt(String(metadata.size || "0"), 10);
+
         if (fileSize > MAX_IMAGE_SIZE) {
           throw new HttpsError(
-            'invalid-argument',
+            "invalid-argument",
             `Image too large. Maximum size is ${MAX_IMAGE_SIZE / 1024 / 1024} MB`
           );
         }
@@ -101,7 +101,7 @@ export const startPhotoImport = onCall(
     const rateLimitCheck = await checkPhotoRateLimit(userId);
     if (!rateLimitCheck.allowed) {
       throw new HttpsError(
-        'resource-exhausted',
+        "resource-exhausted",
         `Rate limit exceeded. ${rateLimitCheck.message}`
       );
     }
@@ -109,12 +109,12 @@ export const startPhotoImport = onCall(
     try {
       // Extract importId from storagePath
       // storagePath format: imports/{userId}/{importId}.jpg
-      const pathParts = storagePath.split('/');
+      const pathParts = storagePath.split("/");
       if (pathParts.length !== 3) {
-        throw new HttpsError('invalid-argument', 'Invalid storage path format');
+        throw new HttpsError("invalid-argument", "Invalid storage path format");
       }
       const fileName = pathParts[2]; // e.g., "imp_1768772151127_wrymvjnxl.jpg"
-      const importId = fileName.replace(/\.(jpg|jpeg|png)$/i, ''); // Remove extension
+      const importId = fileName.replace(/\.(jpg|jpeg|png)$/i, ""); // Remove extension
 
       console.log(`📸 Photo import: extracted importId=${importId} from storagePath=${storagePath}`);
 
@@ -125,9 +125,9 @@ export const startPhotoImport = onCall(
       const importJob: ImportJob = {
         id: importId,
         userId,
-        source: 'photo',
+        source: "photo",
         storagePath,
-        status: 'queued',
+        status: "queued",
         createdAt: Date.now(),
         updatedAt: Date.now(),
         errorCode: null,
@@ -142,17 +142,17 @@ export const startPhotoImport = onCall(
       // The onDocumentCreated trigger will fire automatically
       // We'll process it in the background
 
-      return { importId };
+      return {importId};
     } catch (error: any) {
-      console.error('Error starting photo import:', error);
-      throw new HttpsError('internal', error.message || 'Failed to start photo import');
+      console.error("Error starting photo import:", error);
+      throw new HttpsError("internal", error.message || "Failed to start photo import");
     }
   }
 );
 
 /**
  * Process photo import (background function)
- * 
+ *
  * Triggered when import job is created
  */
 export const processPhotoImport = onDocumentCreated(
@@ -164,7 +164,7 @@ export const processPhotoImport = onDocumentCreated(
     const importId = event.params.importId;
     const importData = event.data?.data() as ImportJob | undefined;
 
-    if (!importData || importData.status !== 'queued' || importData.source !== 'photo') {
+    if (!importData || importData.status !== "queued" || importData.source !== "photo") {
       return; // Only process photo imports when status is 'queued'
     }
 
@@ -179,18 +179,18 @@ export const processPhotoImport = onDocumentCreated(
     try {
       // Update status to ocr
       await importRef.update({
-        status: 'ocr',
+        status: "ocr",
         updatedAt: Date.now(),
       });
 
       // Read image from Storage
       // Explicitly specify bucket name for emulator compatibility
-      const bucketName = process.env.STORAGE_BUCKET || 'cookthispage.appspot.com';
+      const bucketName = process.env.STORAGE_BUCKET || "cookthispage.appspot.com";
       const bucket = admin.storage().bucket(bucketName);
       const file = bucket.file(importData.storagePath);
-      
+
       console.log(`🔍 Looking for file in bucket: ${bucketName}, path: ${importData.storagePath}`);
-      
+
       // Wait a bit and retry if file doesn't exist immediately (storage eventual consistency)
       // Storage emulator may need more time to make files available
       let exists = false;
@@ -200,24 +200,24 @@ export const processPhotoImport = onDocumentCreated(
         [exists] = await file.exists();
         if (!exists) {
           console.log(`File ${importData.storagePath} not found, retrying... (${retries} retries left, waiting ${waitTime}ms)`);
-          await new Promise(resolve => setTimeout(resolve, waitTime));
+          await new Promise((resolve) => setTimeout(resolve, waitTime));
           waitTime += 1000; // Increase wait time with each retry
           retries--;
         }
       }
-      
+
       // Log file metadata if it exists
       if (exists) {
         try {
           const [metadata] = await file.getMetadata();
           console.log(`✅ File found! Size: ${metadata.size} bytes, ContentType: ${metadata.contentType}`);
         } catch (metaError) {
-          console.warn('Could not get file metadata:', metaError);
+          console.warn("Could not get file metadata:", metaError);
         }
       }
-      
+
       if (!exists) {
-        throw new Error('Image file not found in storage');
+        throw new Error("Image file not found in storage");
       }
 
       const [imageBuffer] = await file.download();
@@ -233,7 +233,7 @@ export const processPhotoImport = onDocumentCreated(
       const ocrMs = Date.now() - ocrStart;
 
       if (!ocrText || ocrText.trim().length < 50) {
-        throw new Error('OCR did not extract sufficient text from image');
+        throw new Error("OCR did not extract sufficient text from image");
       }
 
       // Sanitize OCR text
@@ -241,7 +241,7 @@ export const processPhotoImport = onDocumentCreated(
 
       // Update status to extracting
       await importRef.update({
-        status: 'extracting',
+        status: "extracting",
         updatedAt: Date.now(),
       });
 
@@ -260,21 +260,21 @@ export const processPhotoImport = onDocumentCreated(
       const draft: any = {
         id: draftId,
         userId: importData.userId,
-        source: 'photo',
+        source: "photo",
         importId,
         imageStoragePath: importData.storagePath,
-        parser: 'vision_ocr+heuristic',
+        parser: "vision_ocr+heuristic",
         createdAt: Date.now(),
       };
 
       // Copy fields from parsed draft, only if they're defined
       if (parsedDraft.title) draft.title = parsedDraft.title;
-      
+
       // Clean ingredients array - remove undefined values from each ingredient
       if (parsedDraft.ingredients) {
         draft.ingredients = parsedDraft.ingredients.map((ing: any) => {
           const cleaned: any = {
-            raw: ing.raw || '',
+            raw: ing.raw || "",
           };
           if (ing.name) cleaned.name = ing.name;
           if (ing.quantity !== undefined && ing.quantity !== null) cleaned.quantity = ing.quantity;
@@ -283,13 +283,13 @@ export const processPhotoImport = onDocumentCreated(
           return cleaned;
         });
       }
-      
+
       // Clean instructions array - ensure all required fields are present
       if (parsedDraft.instructions) {
         draft.instructions = parsedDraft.instructions.map((inst: any, index: number) => {
           const cleaned: any = {
             step: inst.step !== undefined ? inst.step : index + 1,
-            text: inst.text || inst.description || '',
+            text: inst.text || inst.description || "",
           };
           return cleaned;
         });
@@ -305,7 +305,7 @@ export const processPhotoImport = onDocumentCreated(
 
       // Store OCR text for debugging (optional, can be truncated)
       if (sanitizedText) {
-        draft.ocrText = sanitizedText.length > 5000 ? sanitizedText.substring(0, 5000) + '...' : sanitizedText;
+        draft.ocrText = sanitizedText.length > 5000 ? sanitizedText.substring(0, 5000) + "..." : sanitizedText;
       }
 
       // Don't include sourceUrl for photo imports (it's only for URL imports)
@@ -314,12 +314,12 @@ export const processPhotoImport = onDocumentCreated(
 
       // Update import job with result
       await importRef.update({
-        status: 'ready',
+        status: "ready",
         updatedAt: Date.now(),
         result: {
           recipeDraftId: draftId,
           confidence: parseResult.confidence,
-          parser: 'vision_ocr+heuristic',
+          parser: "vision_ocr+heuristic",
           warnings: parseResult.warnings,
         },
         metrics: {
@@ -333,23 +333,23 @@ export const processPhotoImport = onDocumentCreated(
     } catch (error: any) {
       console.error(`Photo import ${importId} failed:`, error);
 
-      let errorCode: ErrorCode = 'OCR_FAILED';
-      let errorMessage = error.message || 'Unknown error';
+      let errorCode: ErrorCode = "OCR_FAILED";
+      let errorMessage = error.message || "Unknown error";
 
       // Classify error
-      if (error.message?.includes('too large') || error.message?.includes('IMAGE_TOO_LARGE')) {
-        errorCode = 'IMAGE_TOO_LARGE';
-      } else if (error.message?.includes('not found') || error.message?.includes('does not exist')) {
-        errorCode = 'OCR_FAILED';
-        errorMessage = 'Image file not found';
-      } else if (error.message?.includes('insufficient text') || error.message?.includes('OCR_NO_TEXT')) {
-        errorCode = 'OCR_NO_TEXT';
-      } else if (error.message?.includes('rate limit')) {
-        errorCode = 'RATE_LIMIT_EXCEEDED';
+      if (error.message?.includes("too large") || error.message?.includes("IMAGE_TOO_LARGE")) {
+        errorCode = "IMAGE_TOO_LARGE";
+      } else if (error.message?.includes("not found") || error.message?.includes("does not exist")) {
+        errorCode = "OCR_FAILED";
+        errorMessage = "Image file not found";
+      } else if (error.message?.includes("insufficient text") || error.message?.includes("OCR_NO_TEXT")) {
+        errorCode = "OCR_NO_TEXT";
+      } else if (error.message?.includes("rate limit")) {
+        errorCode = "RATE_LIMIT_EXCEEDED";
       }
 
       await importRef.update({
-        status: 'failed',
+        status: "failed",
         updatedAt: Date.now(),
         errorCode,
         errorMessage,
@@ -363,20 +363,20 @@ export const processPhotoImport = onDocumentCreated(
  */
 async function performOCR(imageBuffer: Buffer): Promise<string> {
   const client = getVisionClient();
-  
+
   try {
     const [result] = await client.documentTextDetection({
-      image: { content: imageBuffer },
+      image: {content: imageBuffer},
     });
 
     const fullTextAnnotation = result.fullTextAnnotation;
     if (!fullTextAnnotation || !fullTextAnnotation.text) {
-      throw new Error('No text detected in image');
+      throw new Error("No text detected in image");
     }
 
     return fullTextAnnotation.text;
   } catch (error: any) {
-    console.error('Vision API error:', error);
+    console.error("Vision API error:", error);
     throw new Error(`OCR failed: ${error.message}`);
   }
 }
@@ -388,32 +388,32 @@ function sanitizeOCRText(text: string): string {
   let sanitized = text;
 
   // Normalize line breaks
-  sanitized = sanitized.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  sanitized = sanitized.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 
   // Fix common OCR mistakes in recipe context
   // I tsp → 1 tsp (when followed by unit)
-  sanitized = sanitized.replace(/\bI\s+(tsp|tbsp|cup|cups|oz|lb|g|kg|ml|l)\b/gi, '1 $1');
-  
+  sanitized = sanitized.replace(/\bI\s+(tsp|tbsp|cup|cups|oz|lb|g|kg|ml|l)\b/gi, "1 $1");
+
   // O → 0 in temperature/time contexts
-  sanitized = sanitized.replace(/\bO\s*(°|F|C|min|minute|hour|hr)\b/gi, '0$1');
-  sanitized = sanitized.replace(/\b(\d+)\s*O\b/g, '$1 0');
+  sanitized = sanitized.replace(/\bO\s*(°|F|C|min|minute|hour|hr)\b/gi, "0$1");
+  sanitized = sanitized.replace(/\b(\d+)\s*O\b/g, "$1 0");
 
   // Fix common character confusions
-  sanitized = sanitized.replace(/[|]/g, 'l'); // pipe to lowercase L
+  sanitized = sanitized.replace(/[|]/g, "l"); // pipe to lowercase L
   sanitized = sanitized.replace(/[0O]/g, (match, offset, str) => {
     // Context-aware: if followed by unit, likely 0; if in word, likely O
     const next = str.substring(offset + 1, offset + 5);
     if (/^\s*(tsp|tbsp|cup|cups|oz|lb|g|kg|ml|l|min|minute|hour|hr|°)/i.test(next)) {
-      return '0';
+      return "0";
     }
     return match;
   });
 
   // Normalize whitespace (multiple spaces to single)
-  sanitized = sanitized.replace(/[ \t]+/g, ' ');
-  
+  sanitized = sanitized.replace(/[ \t]+/g, " ");
+
   // Normalize multiple newlines (keep max 2 consecutive)
-  sanitized = sanitized.replace(/\n{3,}/g, '\n\n');
+  sanitized = sanitized.replace(/\n{3,}/g, "\n\n");
 
   return sanitized.trim();
 }
@@ -433,9 +433,9 @@ async function checkPhotoRateLimit(userId: string): Promise<{ allowed: boolean; 
   // Count photo imports in last 24 hours
   const recentImports = await db
     .collection(COLLECTIONS.imports)
-    .where('userId', '==', userId)
-    .where('source', '==', 'photo')
-    .where('createdAt', '>=', oneDayAgo)
+    .where("userId", "==", userId)
+    .where("source", "==", "photo")
+    .where("createdAt", ">=", oneDayAgo)
     .get();
 
   const count = recentImports.size;
@@ -447,5 +447,5 @@ async function checkPhotoRateLimit(userId: string): Promise<{ allowed: boolean; 
     };
   }
 
-  return { allowed: true };
+  return {allowed: true};
 }

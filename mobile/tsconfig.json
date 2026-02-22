@@ -37,7 +37,7 @@
   "include": [
     "**/*.ts",
     "**/*.tsx"
-  ],
+, "../docs/sampleRecipe.ts", "../docs/starterRecipes.ts"  ],
   "exclude": [
     "node_modules"
   ]

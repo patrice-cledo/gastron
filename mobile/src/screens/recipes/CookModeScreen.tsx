@@ -20,9 +20,8 @@ import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../../theme/ThemeProvider';
 import { RootStackParamList } from '../../types/navigation';
-import { Recipe, Step } from '../../types/recipe';
-import { starterRecipes } from '../../data/starterRecipes';
-import { sampleRecipeExtended, ExtendedRecipe } from '../../data/sampleRecipe';
+import { Recipe, Step } from '../../types/recipe'; 
+import { sampleRecipeExtended, ExtendedRecipe } from '../../../../docs/sampleRecipe';
 import { IngredientIcon } from '../../components/IngredientIcon';
 import { BottomSheet } from '../../components/BottomSheet';
 import { useRecipesStore } from '../../stores/recipesStore';
@@ -195,23 +194,9 @@ const CookModeScreen: React.FC = () => {
       setIsLoading(true);
       setError(null);
 
-      try {
-        // 1. Check starter recipes first
-        const starterRecipe = starterRecipes.find((r) => r.id === recipeId);
-        if (starterRecipe) {
-          setRecipe({ ...starterRecipe, equipment: [] });
-          setIsLoading(false);
-          return;
-        }
+      try { 
 
-        // 2. Check sample recipe
-        if (recipeId === 'sample-jerk-pork') {
-          setRecipe(sampleRecipeExtended);
-          setIsLoading(false);
-          return;
-        }
-
-        // 3. Check Zustand store (local recipes) - but prefer Firestore if local lacks duration
+        // Check Zustand store (local recipes) - but prefer Firestore if local lacks duration
         const localRecipe = recipes.find((r) => r.id === recipeId);
         if (localRecipe) {
           // Check if local recipe steps have duration - if not, fetch from Firestore instead

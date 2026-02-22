@@ -10,8 +10,7 @@ import { useRecipesStore } from '../../stores/recipesStore';
 import { useGroceriesStore } from '../../stores/groceriesStore';
 import { useCollectionsStore } from '../../stores/collectionsStore';
 import { GrocerySource } from '../../types/grocery';
-import { Recipe } from '../../types/recipe';
-import { starterRecipes } from '../../data/starterRecipes';
+import { Recipe } from '../../types/recipe'; 
 import { useNavigation, useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -118,8 +117,7 @@ const MealPlanScreen: React.FC = () => {
       if (auth.currentUser) {
         try {
           await syncFromFirebase();
-          const recipeMap = new Map<string, Recipe>();
-          starterRecipes.forEach(recipe => recipeMap.set(recipe.id, recipe));
+          const recipeMap = new Map<string, Recipe>(); 
           recipes.forEach(recipe => recipeMap.set(recipe.id, recipe));
           enrichMealPlansWithRecipes(Array.from(recipeMap.values()));
         } catch (error) {
@@ -152,8 +150,7 @@ const MealPlanScreen: React.FC = () => {
     setIsRefreshing(true);
     try {
       await syncFromFirebase();
-      const recipeMap = new Map<string, Recipe>();
-      starterRecipes.forEach(recipe => recipeMap.set(recipe.id, recipe));
+      const recipeMap = new Map<string, Recipe>(); 
       recipes.forEach(recipe => recipeMap.set(recipe.id, recipe));
       enrichMealPlansWithRecipes(Array.from(recipeMap.values()));
     } catch (error) {
@@ -166,8 +163,7 @@ const MealPlanScreen: React.FC = () => {
   // Enrich meal plans with recipe data when recipes change
   useEffect(() => {
     // Get unique recipes by ID (starter recipes + recipes from store)
-    const recipeMap = new Map<string, Recipe>();
-    starterRecipes.forEach(recipe => recipeMap.set(recipe.id, recipe));
+    const recipeMap = new Map<string, Recipe>(); 
     recipes.forEach(recipe => recipeMap.set(recipe.id, recipe));
     const allRecipes = Array.from(recipeMap.values());
     enrichMealPlansWithRecipes(allRecipes);
@@ -408,12 +404,7 @@ const MealPlanScreen: React.FC = () => {
   // Combine starter recipes and all recipes from store (includes Firebase recipes)
   const allRecipes = useMemo(() => {
     // Get unique recipes by ID (starter recipes + recipes from store)
-    const recipeMap = new Map<string, Recipe>();
-
-    // Add starter recipes first
-    starterRecipes.forEach(recipe => {
-      recipeMap.set(recipe.id, recipe);
-    });
+    const recipeMap = new Map<string, Recipe>(); 
 
     // Add recipes from store (will override starter recipes if same ID)
     recipes.forEach(recipe => {
@@ -1057,7 +1048,7 @@ const MealPlanScreen: React.FC = () => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Your Meal Plan</Text>
         {/* Shopping Cart - Top Right */}
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={styles.headerIconButton}
           onPress={() => {
             // Check if there are any meal plans
@@ -1069,7 +1060,7 @@ const MealPlanScreen: React.FC = () => {
           activeOpacity={0.7}
         >
           <Ionicons name="basket-outline" size={24} color="#1A1A1A" />
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       {/* Added Items Notification Banner */}
@@ -1141,9 +1132,18 @@ const MealPlanScreen: React.FC = () => {
                             <Text style={styles.mealPlanTitle} numberOfLines={2}>
                               {plan.recipeTitle}
                             </Text>
-                            {totalTime > 0 && (
-                              <Text style={styles.mealPlanTime}>{totalTime} mins</Text>
-                            )}
+                            <View style={styles.mealPlanTimeAndTypeRow}>
+                              {totalTime > 0 && (
+                                <Text style={styles.mealPlanTime}>{totalTime} mins</Text>
+                              )}
+                              {plan.mealType && (
+                                <View style={[styles.mealPlanMealTypeTag, { backgroundColor: getMealTypeColor(plan.mealType) + '20' }]}>
+                                  <Text style={[styles.mealPlanMealTypeTagText, { color: getMealTypeColor(plan.mealType) }]}>
+                                    {plan.mealType.charAt(0).toUpperCase() + plan.mealType.slice(1)}
+                                  </Text>
+                                </View>
+                              )}
+                            </View>
                           </View>
                           {/* More Options Button */}
                           <TouchableOpacity
@@ -1235,19 +1235,7 @@ const MealPlanScreen: React.FC = () => {
                       activeOpacity={0.7}
                     >
                       <Ionicons name="add" size={16} color={theme.colors.black} />
-                    </TouchableOpacity>
-                    {hasPlans && (
-                      <TouchableOpacity
-                        ref={(ref) => {
-                          overflowButtonRefs.current[dayKey] = ref;
-                        }}
-                        style={styles.overflowButton}
-                        onPress={() => handleOverflowMenu(dayKey)}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="ellipsis-horizontal" size={20} color="#1A1A1A" />
-                      </TouchableOpacity>
-                    )}
+                    </TouchableOpacity> 
                   </View>
                 </View>
                 <View style={styles.mealPlansContainer}>
@@ -1276,9 +1264,18 @@ const MealPlanScreen: React.FC = () => {
                                 <Text style={styles.mealPlanTitle} numberOfLines={2}>
                                   {plan.recipeTitle}
                                 </Text>
-                                {totalTime > 0 && (
-                                  <Text style={styles.mealPlanTime}>{totalTime} mins</Text>
-                                )}
+                                <View style={styles.mealPlanTimeAndTypeRow}>
+                                  {totalTime > 0 && (
+                                    <Text style={styles.mealPlanTime}>{totalTime} mins</Text>
+                                  )}
+                                  {plan.mealType && (
+                                    <View style={[styles.mealPlanMealTypeTag, { backgroundColor: getMealTypeColor(plan.mealType) + '20' }]}>
+                                      <Text style={[styles.mealPlanMealTypeTagText, { color: getMealTypeColor(plan.mealType) }]}>
+                                        {plan.mealType.charAt(0).toUpperCase() + plan.mealType.slice(1)}
+                                      </Text>
+                                    </View>
+                                  )}
+                                </View>
                               </View>
                               {/* More Options Button */}
                               <TouchableOpacity
@@ -2118,12 +2115,27 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 8,
   },
+  mealPlanMealTypeTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  mealPlanMealTypeTagText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
   mealPlanTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1A1A1A',
     marginBottom: 4,
     lineHeight: 20,
+  },
+  mealPlanTimeAndTypeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 8,
   },
   mealPlanTime: {
     fontSize: 14,

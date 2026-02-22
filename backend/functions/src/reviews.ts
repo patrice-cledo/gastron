@@ -1,18 +1,18 @@
 /**
  * Recipe Reviews and Ratings Cloud Functions
- * 
+ *
  * Functions:
  * - submitReview: Create or update a review for a recipe
  * - getReview: Get a user's review for a specific recipe
  * - getRecipeReviews: Get all reviews for a recipe (with pagination)
  */
 
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
-import * as admin from 'firebase-admin';
+import {onCall, HttpsError} from "firebase-functions/v2/https";
+import * as admin from "firebase-admin";
 import {
   RecipeReview,
   COLLECTIONS,
-} from '../../shared/types';
+} from "../../shared/types";
 
 const db = admin.firestore();
 
@@ -28,51 +28,51 @@ interface SubmitReviewRequest {
  * Submit or update a review for a recipe
  */
 export const submitReview = onCall(
-  { enforceAppCheck: false, maxInstances: 10 },
+  {enforceAppCheck: false, maxInstances: 10},
   async (request) => {
     // Verify authentication
     if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'User must be authenticated');
+      throw new HttpsError("unauthenticated", "User must be authenticated");
     }
 
     const userId = request.auth.uid;
     const data = request.data as SubmitReviewRequest;
 
     // Validate required fields
-    if (!data.recipeId || typeof data.recipeId !== 'string') {
-      throw new HttpsError('invalid-argument', 'Recipe ID is required');
+    if (!data.recipeId || typeof data.recipeId !== "string") {
+      throw new HttpsError("invalid-argument", "Recipe ID is required");
     }
 
-    if (!data.rating || typeof data.rating !== 'number' || data.rating < 1 || data.rating > 5) {
-      throw new HttpsError('invalid-argument', 'Rating must be a number between 1 and 5');
+    if (!data.rating || typeof data.rating !== "number" || data.rating < 1 || data.rating > 5) {
+      throw new HttpsError("invalid-argument", "Rating must be a number between 1 and 5");
     }
 
     // Validate optional fields
-    if (data.comments !== undefined && typeof data.comments !== 'string') {
-      throw new HttpsError('invalid-argument', 'Comments must be a string');
+    if (data.comments !== undefined && typeof data.comments !== "string") {
+      throw new HttpsError("invalid-argument", "Comments must be a string");
     }
 
-    if (data.imageUrl !== undefined && typeof data.imageUrl !== 'string') {
-      throw new HttpsError('invalid-argument', 'Image URL must be a string');
+    if (data.imageUrl !== undefined && typeof data.imageUrl !== "string") {
+      throw new HttpsError("invalid-argument", "Image URL must be a string");
     }
 
-    if (data.userName !== undefined && typeof data.userName !== 'string') {
-      throw new HttpsError('invalid-argument', 'User name must be a string');
+    if (data.userName !== undefined && typeof data.userName !== "string") {
+      throw new HttpsError("invalid-argument", "User name must be a string");
     }
 
     try {
       // Verify recipe exists
       const recipeRef = db.collection(COLLECTIONS.recipes).doc(data.recipeId);
       const recipeDoc = await recipeRef.get();
-      
+
       if (!recipeDoc.exists) {
-        throw new HttpsError('not-found', 'Recipe not found');
+        throw new HttpsError("not-found", "Recipe not found");
       }
 
       // Check if user has permission to review this recipe
       const recipeData = recipeDoc.data();
       if (recipeData && recipeData.isPublic !== true && recipeData.userId !== userId) {
-        throw new HttpsError('permission-denied', 'You do not have permission to review this recipe');
+        throw new HttpsError("permission-denied", "You do not have permission to review this recipe");
       }
 
       const now = Date.now();
@@ -80,8 +80,8 @@ export const submitReview = onCall(
       // Check if user already has a review for this recipe
       const existingReviewQuery = await db
         .collection(COLLECTIONS.reviews)
-        .where('recipeId', '==', data.recipeId)
-        .where('userId', '==', userId)
+        .where("recipeId", "==", data.recipeId)
+        .where("userId", "==", userId)
         .limit(1)
         .get();
 
@@ -92,7 +92,7 @@ export const submitReview = onCall(
         // Update existing review
         const existingReviewDoc = existingReviewQuery.docs[0];
         reviewId = existingReviewDoc.id;
-        
+
         reviewData = {
           id: reviewId,
           recipeId: data.recipeId,
@@ -141,11 +141,11 @@ export const submitReview = onCall(
         review: reviewData,
       };
     } catch (error: any) {
-      console.error('Error submitting review:', error);
+      console.error("Error submitting review:", error);
       if (error instanceof HttpsError) {
         throw error;
       }
-      throw new HttpsError('internal', error.message || 'Failed to submit review');
+      throw new HttpsError("internal", error.message || "Failed to submit review");
     }
   }
 );
@@ -158,26 +158,26 @@ interface GetReviewRequest {
  * Get a user's review for a specific recipe
  */
 export const getReview = onCall(
-  { enforceAppCheck: false, maxInstances: 10 },
+  {enforceAppCheck: false, maxInstances: 10},
   async (request) => {
     // Verify authentication
     if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'User must be authenticated');
+      throw new HttpsError("unauthenticated", "User must be authenticated");
     }
 
     const userId = request.auth.uid;
     const data = request.data as GetReviewRequest;
 
     // Validate required fields
-    if (!data.recipeId || typeof data.recipeId !== 'string') {
-      throw new HttpsError('invalid-argument', 'Recipe ID is required');
+    if (!data.recipeId || typeof data.recipeId !== "string") {
+      throw new HttpsError("invalid-argument", "Recipe ID is required");
     }
 
     try {
       const reviewQuery = await db
         .collection(COLLECTIONS.reviews)
-        .where('recipeId', '==', data.recipeId)
-        .where('userId', '==', userId)
+        .where("recipeId", "==", data.recipeId)
+        .where("userId", "==", userId)
         .limit(1)
         .get();
 
@@ -197,11 +197,11 @@ export const getReview = onCall(
         review: reviewData,
       };
     } catch (error: any) {
-      console.error('Error getting review:', error);
+      console.error("Error getting review:", error);
       if (error instanceof HttpsError) {
         throw error;
       }
-      throw new HttpsError('internal', error.message || 'Failed to get review');
+      throw new HttpsError("internal", error.message || "Failed to get review");
     }
   }
 );
@@ -216,13 +216,13 @@ interface GetRecipeReviewsRequest {
  * Get all reviews for a recipe (public reviews only)
  */
 export const getRecipeReviews = onCall(
-  { enforceAppCheck: false, maxInstances: 10 },
+  {enforceAppCheck: false, maxInstances: 10},
   async (request) => {
     const data = request.data as GetRecipeReviewsRequest;
 
     // Validate required fields
-    if (!data.recipeId || typeof data.recipeId !== 'string') {
-      throw new HttpsError('invalid-argument', 'Recipe ID is required');
+    if (!data.recipeId || typeof data.recipeId !== "string") {
+      throw new HttpsError("invalid-argument", "Recipe ID is required");
     }
 
     const limit = data.limit && data.limit > 0 && data.limit <= 50 ? data.limit : 20;
@@ -230,8 +230,8 @@ export const getRecipeReviews = onCall(
     try {
       let query = db
         .collection(COLLECTIONS.reviews)
-        .where('recipeId', '==', data.recipeId)
-        .orderBy('createdAt', 'desc')
+        .where("recipeId", "==", data.recipeId)
+        .orderBy("createdAt", "desc")
         .limit(limit);
 
       // Handle pagination
@@ -255,11 +255,11 @@ export const getRecipeReviews = onCall(
         lastReviewId: reviews.length > 0 ? reviews[reviews.length - 1].id : null,
       };
     } catch (error: any) {
-      console.error('Error getting recipe reviews:', error);
+      console.error("Error getting recipe reviews:", error);
       if (error instanceof HttpsError) {
         throw error;
       }
-      throw new HttpsError('internal', error.message || 'Failed to get recipe reviews');
+      throw new HttpsError("internal", error.message || "Failed to get recipe reviews");
     }
   }
 );

@@ -14,8 +14,6 @@ import { useMealPlanStore, MealPlanItem } from '../../stores/mealPlanStore';
 import { useGroceriesStore } from '../../stores/groceriesStore';
 import { GrocerySource } from '../../types/grocery';
 import { useNotificationsStore } from '../../stores/notificationsStore';
-import { sampleRecipe } from '../../data/sampleRecipe';
-import { starterRecipes } from '../../data/starterRecipes';
 import { BottomSheet } from '../../components/BottomSheet';
 import { Toast } from '../../components/Toast';
 import { Recipe } from '../../types/recipe';
@@ -261,42 +259,24 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
   // Clean up recipes that don't exist in Firebase
   useEffect(() => {
     const cleanupInvalidRecipes = async () => {
-      if (recipes.length === 0) {
-        addRecipe(sampleRecipe);
-        return;
-      }
+      if (recipes.length === 0) return;
 
       const currentUser = auth.currentUser;
       if (!currentUser) {
-        // If not logged in, keep only starter recipes and sample recipe
-        const validRecipes = recipes.filter(recipe => {
-          // Keep starter recipes and sample recipe
-          const isStarter = starterRecipes.some(sr => sr.id === recipe.id);
-          const isSample = recipe.id === 'sample-jerk-pork';
-          return isStarter || isSample;
-        });
-        if (validRecipes.length !== recipes.length) {
+        // If not logged in, clear recipes (user must log in to have recipes)
+        if (recipes.length > 0) {
           console.log('🧹 Cleaning up invalid recipes (not logged in)');
-          setRecipes(validRecipes.length > 0 ? validRecipes : [sampleRecipe]);
+          setRecipes([]);
         }
         return;
       }
 
       // Check which recipes exist in Firebase
       const recipeValidationPromises = recipes.map(async (recipe) => {
-        // Skip starter recipes and sample recipe - they're always valid
-        const isStarter = starterRecipes.some(sr => sr.id === recipe.id);
-        const isSample = recipe.id === 'sample-jerk-pork';
-        if (isStarter || isSample) {
-          return { recipe, isValid: true };
-        }
-
         try {
-          // Check if recipe exists in Firestore
           const recipeDoc = await getDoc(doc(db, 'recipes', recipe.id));
           if (recipeDoc.exists()) {
             const recipeData = recipeDoc.data();
-            // Also check if user has access to it
             if (recipeData.isPublic === true || recipeData.userId === currentUser.uid) {
               return { recipe, isValid: true };
             }
@@ -313,10 +293,9 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
         .filter(result => result.isValid)
         .map(result => result.recipe);
 
-      // If we removed some recipes, update the store
       if (validRecipes.length !== recipes.length) {
         console.log(`🧹 Cleaning up invalid recipes: removed ${recipes.length - validRecipes.length} recipes`);
-        setRecipes(validRecipes.length > 0 ? validRecipes : [sampleRecipe]);
+        setRecipes(validRecipes);
       }
     };
 
@@ -415,27 +394,23 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
   const handleAddToMenu = async () => {
     if (!selectedRecipeForMenu || !selectedMealType) return;
 
-    // Resolve servings from same sources as RecipeDetailScreen so card flow matches detail flow
+    // Resolve servings from Firestore (same source as RecipeDetailScreen) or store fallback
     let recipeServings: number;
-    const starter = starterRecipes.find(r => r.id === selectedRecipeForMenu.id);
-    if (starter) {
-      recipeServings = Math.max(1, Number(starter.servings) || 4);
-    } else if (selectedRecipeForMenu.id === sampleRecipe.id) {
-      recipeServings = Math.max(1, Number(sampleRecipe.servings) || 4);
-    } else {
-      try {
+    try {
         const recipeDoc = await getDoc(doc(db, 'recipes', selectedRecipeForMenu.id));
         if (recipeDoc.exists() && recipeDoc.data()?.servings != null) {
           recipeServings = Math.max(1, Number(recipeDoc.data()!.servings) || 4);
+          console.log('🍽️ Recipe servings - 1 :', recipeServings);
         } else {
           const latestRecipe = recipes.find(r => r.id === selectedRecipeForMenu.id) || selectedRecipeForMenu;
           recipeServings = Math.max(1, Number(latestRecipe.servings) || 4);
+          console.log('🍽️ Recipe servings - 2:', recipeServings);
         }
       } catch {
         const latestRecipe = recipes.find(r => r.id === selectedRecipeForMenu.id) || selectedRecipeForMenu;
         recipeServings = Math.max(1, Number(latestRecipe.servings) || 4);
+        console.log('🍽️ Recipe servings - 3:', recipeServings);
       }
-    }
 
     const newMealPlan: MealPlanItem = {
       id: `${Date.now()}-${Math.random()}`,
@@ -507,17 +482,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
     { id: 'snack', label: 'Snack', icon: 'gift-outline' },
   ];
 
-  // Ensure we always have at least the sample recipe
-  // Also restore images for recipes that lost them during persistence (require() results can't be serialized to JSON)
-  const allRecipes = useMemo(() => {
-    return (recipes.length > 0 ? recipes : [sampleRecipe]).map(recipe => {
-      // For sample recipe, always use the fresh image from sampleRecipe (it gets lost during JSON serialization)
-      if (recipe.id === sampleRecipe.id) {
-        return { ...recipe, image: sampleRecipe.image };
-      }
-      return recipe;
-    });
-  }, [recipes]);
+  const allRecipes = useMemo(() => recipes, [recipes]);
 
   // Filter recipes based on user preferences for inspiration
   const filterRecipesByPreferences = (recipesToFilter: Recipe[]): Recipe[] => {
@@ -958,14 +923,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
               contentContainerStyle={styles.horizontalScroll}
             >
               {whatsNewRecipes.map((recipe, index) => {
-                // Get image - use sampleRecipe image if this is the sample recipe and image is missing/lost during persistence
-                let image = recipe.image;
-                if (recipe.id === sampleRecipe.id) {
-                  if (!image || image === null || image === undefined || (typeof image !== 'string' && typeof image !== 'number')) {
-                    image = sampleRecipe.image;
-                  }
-                }
-
+                const image = recipe.image;
                 // Use cached URL if available, otherwise use original image
                 const displayImage = imageUrls[recipe.id] || image;
 
@@ -1024,14 +982,7 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
               {Array.from({ length: 4 }).map((_, index) => {
                 const recipe = myRecipes[index];
                 if (recipe) {
-                  // Get image - use sampleRecipe image if this is the sample recipe and image is missing/lost during persistence
-                  let image = recipe.image;
-                  if (recipe.id === sampleRecipe.id) {
-                    if (!image || image === null || image === undefined || (typeof image !== 'string' && typeof image !== 'number')) {
-                      image = sampleRecipe.image;
-                    }
-                  }
-
+                  const image = recipe.image;
                   // Use cached URL if available (for storage paths), otherwise use original image
                   // This matches the behavior in WantToCookScreen but adds support for storage paths
                   const displayImage = imageUrls[recipe.id] || image;
@@ -1615,24 +1566,17 @@ const RecipesScreen: React.FC<RecipesScreenProps> = ({ navigation }) => {
                       onPress={async () => {
                         const today = formatDateKey(new Date());
                         let recipeServings: number;
-                        const starter = starterRecipes.find(r => r.id === selectedRecipeForOptions.id);
-                        if (starter) {
-                          recipeServings = Math.max(1, Number(starter.servings) || 4);
-                        } else if (selectedRecipeForOptions.id === sampleRecipe.id) {
-                          recipeServings = Math.max(1, Number(sampleRecipe.servings) || 4);
-                        } else {
-                          try {
-                            const recipeDoc = await getDoc(doc(db, 'recipes', selectedRecipeForOptions.id));
-                            if (recipeDoc.exists() && recipeDoc.data()?.servings != null) {
-                              recipeServings = Math.max(1, Number(recipeDoc.data()!.servings) || 4);
-                            } else {
-                              const latestRecipe = recipes.find(r => r.id === selectedRecipeForOptions.id) || selectedRecipeForOptions;
-                              recipeServings = Math.max(1, Number(latestRecipe.servings) || 4);
-                            }
-                          } catch {
+                        try {
+                          const recipeDoc = await getDoc(doc(db, 'recipes', selectedRecipeForOptions.id));
+                          if (recipeDoc.exists() && recipeDoc.data()?.servings != null) {
+                            recipeServings = Math.max(1, Number(recipeDoc.data()!.servings) || 4);
+                          } else {
                             const latestRecipe = recipes.find(r => r.id === selectedRecipeForOptions.id) || selectedRecipeForOptions;
                             recipeServings = Math.max(1, Number(latestRecipe.servings) || 4);
                           }
+                        } catch {
+                          const latestRecipe = recipes.find(r => r.id === selectedRecipeForOptions.id) || selectedRecipeForOptions;
+                          recipeServings = Math.max(1, Number(latestRecipe.servings) || 4);
                         }
                         const newMealPlan: MealPlanItem = {
                           id: `meal-${Date.now()}`,

@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Gastrons",
-    "slug": "gastrons",
+    "slug": "gastron",
     "version": "1.0.0",
     "sdkVersion": "54.0.0",
     "main": "index.js",
@@ -44,6 +44,12 @@
           }
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "77f83aa5-1db2-4869-943c-0371887f5934"
+      }
+    },
+    "owner": "patricecledo"
   }
 }

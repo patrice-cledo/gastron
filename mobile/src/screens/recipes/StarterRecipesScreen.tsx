@@ -11,7 +11,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../types/navigation';
 import { useTheme } from '../../theme/ThemeProvider';
-import { starterRecipes } from '../../data/starterRecipes';
 import { Recipe } from '../../types/recipe';
 
 type StarterRecipesScreenProps = NativeStackScreenProps<
@@ -68,47 +67,53 @@ const StarterRecipesScreen: React.FC<StarterRecipesScreenProps> = ({ navigation 
         </View>
 
         <View style={styles.recipesGrid}>
-          {starterRecipes.map((recipe) => (
-            <TouchableOpacity
-              key={recipe.id}
-              style={styles.recipeCard}
-              onPress={() => handleRecipePress(recipe)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.recipeThumbnail}>
-                <Text style={styles.recipeThumbnailPlaceholder}>📄</Text>
-              </View>
-              <Text style={styles.recipeName} numberOfLines={2}>
-                {recipe.title}
-              </Text>
-              <Text style={styles.recipeDescription} numberOfLines={1}>
-                {recipe.description}
-              </Text>
-              <View style={styles.recipeMeta}>
-                <View style={styles.metaItem}>
-                  <Text style={styles.metaIcon}>⏱</Text>
-                  <Text style={styles.metaText}>{getTotalTime(recipe)} min</Text>
-                </View>
-                {recipe.servings && (
-                  <View style={styles.metaItem}>
-                    <Text style={styles.metaIcon}>👥</Text>
-                    <Text style={styles.metaText}>{recipe.servings}</Text>
-                  </View>
-                )}
-              </View>
+          {([] as Recipe[]).length > 0 ? (
+            ([] as Recipe[]).map((recipe) => (
               <TouchableOpacity
-                style={styles.bookmarkButton}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  handleBookmark(recipe.id);
-                }}
+                key={recipe.id}
+                style={styles.recipeCard}
+                onPress={() => handleRecipePress(recipe)}
+                activeOpacity={0.7}
               >
-                <Text style={styles.bookmarkIcon}>
-                  {bookmarkedRecipes.has(recipe.id) ? '🔖' : '📖'}
+                <View style={styles.recipeThumbnail}>
+                  <Text style={styles.recipeThumbnailPlaceholder}>📄</Text>
+                </View>
+                <Text style={styles.recipeName} numberOfLines={2}>
+                  {recipe.title}
                 </Text>
+                <Text style={styles.recipeDescription} numberOfLines={1}>
+                  {recipe.description}
+                </Text>
+                <View style={styles.recipeMeta}>
+                  <View style={styles.metaItem}>
+                    <Text style={styles.metaIcon}>⏱</Text>
+                    <Text style={styles.metaText}>{getTotalTime(recipe)} min</Text>
+                  </View>
+                  {recipe.servings && (
+                    <View style={styles.metaItem}>
+                      <Text style={styles.metaIcon}>👥</Text>
+                      <Text style={styles.metaText}>{recipe.servings}</Text>
+                    </View>
+                  )}
+                </View>
+                <TouchableOpacity
+                  style={styles.bookmarkButton}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleBookmark(recipe.id);
+                  }}
+                >
+                  <Text style={styles.bookmarkIcon}>
+                    {bookmarkedRecipes.has(recipe.id) ? '🔖' : '📖'}
+                  </Text>
+                </TouchableOpacity>
               </TouchableOpacity>
-            </TouchableOpacity>
-          ))}
+            ))
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>Browse recipes from the home screen.</Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -238,6 +243,17 @@ const styles = StyleSheet.create({
   },
   bookmarkIcon: {
     fontSize: 20,
+  },
+  emptyState: {
+    width: '100%',
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 });
 

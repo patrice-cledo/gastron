@@ -1,17 +1,17 @@
 /**
  * OTP Authentication Cloud Functions
- * 
+ *
  * Functions:
  * - requestEmailOtp: Request OTP code via email
  * - verifyEmailOtp: Verify OTP and create/get Firebase Auth user
  */
 
-import { onCall, HttpsError } from 'firebase-functions/v2/https';
-import * as admin from 'firebase-admin';
+import {onCall, HttpsError} from "firebase-functions/v2/https";
+import * as admin from "firebase-admin";
 import {
   OtpChallenge,
   COLLECTIONS,
-} from '../../shared/types';
+} from "../../shared/types";
 import {
   generateOtp,
   hashOtp,
@@ -19,10 +19,10 @@ import {
   verifyOtp,
   hashIp,
   extractEmailDomain,
-} from '../../shared/otpUtils';
+} from "../../shared/otpUtils";
 import {
   sendOtpEmailWithRetry,
-} from '../../shared/loopsClient';
+} from "../../shared/loopsClient";
 
 // Firebase Admin is initialized in index.ts before this module is imported
 // No need to initialize here
@@ -41,14 +41,14 @@ const RESEND_COOLDOWN_SECONDS = 60;
 // In production, use Firebase Functions secrets
 function getLoopsConfig(): { apiKey: string; transactionalId: string } {
   // For emulator/development, use environment variables or defaults
-  const apiKey = process.env.LOOPS_API_KEY || '';
-  const transactionalId = process.env.LOOPS_TRANSACTIONAL_ID || '';
+  const apiKey = process.env.LOOPS_API_KEY || "";
+  const transactionalId = process.env.LOOPS_TRANSACTIONAL_ID || "";
 
   if (!apiKey || !transactionalId) {
-    console.warn('Loops.so configuration missing. OTP emails will fail.');
+    console.warn("Loops.so configuration missing. OTP emails will fail.");
   }
 
-  return { apiKey, transactionalId };
+  return {apiKey, transactionalId};
 }
 
 interface RequestOtpRequest {
@@ -63,27 +63,27 @@ interface VerifyOtpRequest {
 
 /**
  * Request OTP code via email
- * 
+ *
  * Generates OTP, stores hashed challenge, sends email via Loops.so
  */
 export const requestEmailOtp = onCall(
-  { 
-    enforceAppCheck: false, 
+  {
+    enforceAppCheck: false,
     maxInstances: 10,
   },
   async (request) => {
     const data = request.data as RequestOtpRequest;
-    const { email } = data;
+    const {email} = data;
 
     // Validate email
-    if (!email || typeof email !== 'string') {
-      throw new HttpsError('invalid-argument', 'Email is required');
+    if (!email || typeof email !== "string") {
+      throw new HttpsError("invalid-argument", "Email is required");
     }
 
     // Basic email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      throw new HttpsError('invalid-argument', 'Invalid email format');
+      throw new HttpsError("invalid-argument", "Invalid email format");
     }
 
     const normalizedEmail = email.toLowerCase().trim();
@@ -93,18 +93,18 @@ export const requestEmailOtp = onCall(
     // Note: In Cloud Functions v2, IP might not be directly available
     // For emulator, we'll use a placeholder
     const rawRequest = (request as any).rawRequest;
-    const clientIp = rawRequest?.ip || 
-      rawRequest?.headers?.['x-forwarded-for']?.split(',')[0]?.trim() ||
+    const clientIp = rawRequest?.ip ||
+      rawRequest?.headers?.["x-forwarded-for"]?.split(",")[0]?.trim() ||
       rawRequest?.connection?.remoteAddress ||
-      'unknown';
+      "unknown";
     const ipHash = hashIp(clientIp);
 
     // Check rate limits
     const rateLimitCheck = await checkRateLimits(normalizedEmail, ipHash);
     if (!rateLimitCheck.allowed) {
       throw new HttpsError(
-        'resource-exhausted',
-        rateLimitCheck.message || 'Rate limit exceeded. Please try again later.'
+        "resource-exhausted",
+        rateLimitCheck.message || "Rate limit exceeded. Please try again later."
       );
     }
 
@@ -115,7 +115,7 @@ export const requestEmailOtp = onCall(
         (recentChallenge.createdAt + RESEND_COOLDOWN_SECONDS * 1000 - Date.now()) / 1000
       );
       throw new HttpsError(
-        'resource-exhausted',
+        "resource-exhausted",
         `Please wait ${secondsRemaining} seconds before requesting a new code.`
       );
     }
@@ -134,12 +134,12 @@ export const requestEmailOtp = onCall(
     const challengeRef = db.collection(COLLECTIONS.otpChallenges).doc();
     const challengeId = challengeRef.id;
 
-    const challenge: Omit<OtpChallenge, 'id'> & { salt: string } = {
+    const challenge: Omit<OtpChallenge, "id"> & { salt: string } = {
       email: normalizedEmail,
       otpHash,
       salt, // Store salt for verification
       expiresAt,
-      status: 'pending',
+      status: "pending",
       attempts: 0,
       maxAttempts: OTP_MAX_ATTEMPTS,
       createdAt: Date.now(),
@@ -155,10 +155,10 @@ export const requestEmailOtp = onCall(
       if (!loopsConfig.apiKey || !loopsConfig.transactionalId) {
         // In development/emulator, log the OTP instead of sending
         console.log(`[DEV] OTP for ${normalizedEmail}: ${otpCode} (expires in ${OTP_EXPIRY_MINUTES} minutes)`);
-        
+
         return {
           challengeId,
-          message: 'OTP code logged to console (development mode)',
+          message: "OTP code logged to console (development mode)",
         };
       }
 
@@ -173,15 +173,15 @@ export const requestEmailOtp = onCall(
       if (!emailResult.success) {
         // Mark challenge as failed delivery
         await challengeRef.update({
-          status: 'failed_delivery',
+          status: "failed_delivery",
         });
 
         // Log error (but don't expose to client)
         console.error(`Failed to send OTP email to ${emailDomain}:`, emailResult.error);
 
         throw new HttpsError(
-          'internal',
-          'Failed to send verification code. Please try again.'
+          "internal",
+          "Failed to send verification code. Please try again."
         );
       }
 
@@ -190,11 +190,11 @@ export const requestEmailOtp = onCall(
 
       return {
         challengeId,
-        message: 'Verification code sent to your email',
+        message: "Verification code sent to your email",
       };
     } catch (error: any) {
       // Clean up challenge if email send failed
-      if (error instanceof HttpsError && error.code === 'internal') {
+      if (error instanceof HttpsError && error.code === "internal") {
         try {
           await challengeRef.delete();
         } catch {
@@ -210,26 +210,26 @@ export const requestEmailOtp = onCall(
  * Verify OTP code and create/get Firebase Auth user
  */
 export const verifyEmailOtp = onCall(
-  { 
-    enforceAppCheck: false, 
+  {
+    enforceAppCheck: false,
     maxInstances: 10,
   },
   async (request) => {
     const data = request.data as VerifyOtpRequest;
-    const { challengeId, otpCode, firstName } = data;
+    const {challengeId, otpCode, firstName} = data;
 
     // Validate inputs
-    if (!challengeId || typeof challengeId !== 'string') {
-      throw new HttpsError('invalid-argument', 'challengeId is required');
+    if (!challengeId || typeof challengeId !== "string") {
+      throw new HttpsError("invalid-argument", "challengeId is required");
     }
 
-    if (!otpCode || typeof otpCode !== 'string') {
-      throw new HttpsError('invalid-argument', 'otpCode is required');
+    if (!otpCode || typeof otpCode !== "string") {
+      throw new HttpsError("invalid-argument", "otpCode is required");
     }
 
     // Validate OTP format (6 digits)
     if (!/^\d{6}$/.test(otpCode)) {
-      throw new HttpsError('invalid-argument', 'OTP code must be 6 digits');
+      throw new HttpsError("invalid-argument", "OTP code must be 6 digits");
     }
 
     // Get challenge from Firestore
@@ -237,35 +237,35 @@ export const verifyEmailOtp = onCall(
     const challengeDoc = await challengeRef.get();
 
     if (!challengeDoc.exists) {
-      throw new HttpsError('not-found', 'Invalid or expired verification code');
+      throw new HttpsError("not-found", "Invalid or expired verification code");
     }
 
-    const challenge = { id: challengeDoc.id, ...challengeDoc.data() } as OtpChallenge;
+    const challenge = {id: challengeDoc.id, ...challengeDoc.data()} as OtpChallenge;
 
     // Check if already verified
-    if (challenge.status === 'verified') {
-      throw new HttpsError('failed-precondition', 'This code has already been used');
+    if (challenge.status === "verified") {
+      throw new HttpsError("failed-precondition", "This code has already been used");
     }
 
     // Check if expired
-    if (challenge.status === 'expired' || Date.now() > challenge.expiresAt) {
-      await challengeRef.update({ status: 'expired' });
-      throw new HttpsError('deadline-exceeded', 'Verification code has expired');
+    if (challenge.status === "expired" || Date.now() > challenge.expiresAt) {
+      await challengeRef.update({status: "expired"});
+      throw new HttpsError("deadline-exceeded", "Verification code has expired");
     }
 
     // Check if too many attempts
     if (challenge.attempts >= challenge.maxAttempts) {
-      await challengeRef.update({ status: 'expired' });
+      await challengeRef.update({status: "expired"});
       throw new HttpsError(
-        'resource-exhausted',
-        'Too many verification attempts. Please request a new code.'
+        "resource-exhausted",
+        "Too many verification attempts. Please request a new code."
       );
     }
 
     // Verify OTP
     const salt = challenge.salt;
     if (!salt) {
-      throw new HttpsError('internal', 'Invalid challenge format');
+      throw new HttpsError("internal", "Invalid challenge format");
     }
 
     const isValid = verifyOtp(otpCode, challenge.otpHash, salt);
@@ -278,21 +278,21 @@ export const verifyEmailOtp = onCall(
     if (!isValid) {
       // Check if this was the last attempt
       if (challenge.attempts + 1 >= challenge.maxAttempts) {
-        await challengeRef.update({ status: 'expired' });
+        await challengeRef.update({status: "expired"});
         throw new HttpsError(
-          'invalid-argument',
-          'Invalid code. Maximum attempts reached. Please request a new code.'
+          "invalid-argument",
+          "Invalid code. Maximum attempts reached. Please request a new code."
         );
       }
       throw new HttpsError(
-        'invalid-argument',
+        "invalid-argument",
         `Invalid code. ${challenge.maxAttempts - challenge.attempts - 1} attempts remaining.`
       );
     }
 
     // OTP is valid - mark as verified
     await challengeRef.update({
-      status: 'verified',
+      status: "verified",
       verifiedAt: Date.now(),
     });
 
@@ -304,19 +304,19 @@ export const verifyEmailOtp = onCall(
       user = await auth.getUserByEmail(challenge.email);
     } catch (error: any) {
       // Check if Auth emulator is not running
-      if (error.code === 'app/network-error' || error.code === 'auth/configuration-not-found') {
+      if (error.code === "app/network-error" || error.code === "auth/configuration-not-found") {
         const emulatorHost = process.env.FIREBASE_AUTH_EMULATOR_HOST;
-        console.error('❌ Auth emulator connection error:', error.message);
-        console.error('   Make sure the Auth emulator is running on:', emulatorHost || '127.0.0.1:9099');
-        console.error('   Restart emulators with: npm run firebase:emulators');
+        console.error("❌ Auth emulator connection error:", error.message);
+        console.error("   Make sure the Auth emulator is running on:", emulatorHost || "127.0.0.1:9099");
+        console.error("   Restart emulators with: npm run firebase:emulators");
         throw new HttpsError(
-          'unavailable',
-          'Auth emulator is not running. Please start the emulators with: npm run firebase:emulators'
+          "unavailable",
+          "Auth emulator is not running. Please start the emulators with: npm run firebase:emulators"
         );
       }
-      
+
       // User doesn't exist, create new one
-      if (error.code === 'auth/user-not-found') {
+      if (error.code === "auth/user-not-found") {
         isNewUser = true;
         user = await auth.createUser({
           email: challenge.email,
@@ -337,7 +337,7 @@ export const verifyEmailOtp = onCall(
         firstName: firstName,
         displayName: firstName,
         createdAt: Date.now(),
-      }, { merge: true });
+      }, {merge: true});
       console.log(`Created user profile for ${user.uid} with firstName: ${firstName}`);
     }
 
@@ -351,7 +351,7 @@ export const verifyEmailOtp = onCall(
       customToken,
       userId: user.uid,
       email: user.email,
-      isNewUser: isNewUser || (!user.metadata.creationTime || 
+      isNewUser: isNewUser || (!user.metadata.creationTime ||
         user.metadata.creationTime === user.metadata.lastSignInTime),
     };
   }
@@ -370,32 +370,32 @@ async function checkRateLimits(
   // Check email rate limit
   const emailChallenges = await db
     .collection(COLLECTIONS.otpChallenges)
-    .where('email', '==', email)
-    .where('createdAt', '>=', oneHourAgo)
+    .where("email", "==", email)
+    .where("createdAt", ">=", oneHourAgo)
     .get();
 
   if (emailChallenges.size >= RATE_LIMIT_EMAIL_PER_HOUR) {
     return {
       allowed: false,
-      message: `Too many requests. Please wait before requesting another code.`,
+      message: "Too many requests. Please wait before requesting another code.",
     };
   }
 
   // Check IP rate limit
   const ipChallenges = await db
     .collection(COLLECTIONS.otpChallenges)
-    .where('ipHash', '==', ipHash)
-    .where('createdAt', '>=', oneHourAgo)
+    .where("ipHash", "==", ipHash)
+    .where("createdAt", ">=", oneHourAgo)
     .get();
 
   if (ipChallenges.size >= RATE_LIMIT_IP_PER_HOUR) {
     return {
       allowed: false,
-      message: `Too many requests from this location. Please try again later.`,
+      message: "Too many requests from this location. Please try again later.",
     };
   }
 
-  return { allowed: true };
+  return {allowed: true};
 }
 
 /**
@@ -409,9 +409,9 @@ async function checkResendCooldown(
 
   const recentChallenges = await db
     .collection(COLLECTIONS.otpChallenges)
-    .where('email', '==', email)
-    .where('createdAt', '>=', cooldownStart)
-    .orderBy('createdAt', 'desc')
+    .where("email", "==", email)
+    .where("createdAt", ">=", cooldownStart)
+    .orderBy("createdAt", "desc")
     .limit(1)
     .get();
 

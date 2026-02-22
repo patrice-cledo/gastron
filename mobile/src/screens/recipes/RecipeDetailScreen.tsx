@@ -21,10 +21,8 @@ import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context'
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../../theme/ThemeProvider';
-import { RootStackParamList } from '../../types/navigation';
-import { Recipe } from '../../types/recipe';
-import { starterRecipes } from '../../data/starterRecipes';
-import { sampleRecipeExtended, ExtendedRecipe } from '../../data/sampleRecipe';
+import { RootStackParamList } from '../../types/navigation'; 
+import { sampleRecipeExtended, ExtendedRecipe } from '../../../../docs/sampleRecipe';
 import { useRecipesStore } from '../../stores/recipesStore';
 import { useUserPreferencesStore } from '../../stores/userPreferencesStore';
 import { useMealPlanStore, MealPlanItem } from '../../stores/mealPlanStore';
@@ -302,23 +300,9 @@ const RecipeDetailScreen: React.FC = () => {
       setIsLoading(true);
       setError(null);
 
-      try {
-        // 1. Check starter recipes first
-        const starterRecipe = starterRecipes.find((r) => r.id === recipeId);
-        if (starterRecipe) {
-          setRecipe({ ...starterRecipe, tags: [], category: 'Meat', rating: 4.4, reviewCount: 0, chefTips: undefined } as unknown as ExtendedRecipe);
-          setIsLoading(false);
-          return;
-        }
+      try { 
 
-        // 2. Check sample recipe
-        if (recipeId === 'sample-jerk-pork') {
-          setRecipe(sampleRecipeExtended);
-          setIsLoading(false);
-          return;
-        }
-
-        // 3. Check Zustand store (local recipes)
+        // Check Zustand store (local recipes)
         const localRecipe = recipes.find((r) => r.id === recipeId);
         if (localRecipe) {
           console.log('📋 Local recipe found:', {
@@ -350,6 +334,9 @@ const RecipeDetailScreen: React.FC = () => {
             } as unknown as ExtendedRecipe;
             console.log('📋 Local recipe tags after conversion:', extendedRecipe.tags);
             setRecipe(extendedRecipe);
+            if (localRecipe.servings != null && localRecipe.servings >= 1) {
+              setServings(Number(localRecipe.servings));
+            }
             setIsLoading(false);
             return;
           }
@@ -361,8 +348,6 @@ const RecipeDetailScreen: React.FC = () => {
 
         if (recipeDoc.exists()) {
           const userRecipe = { id: recipeDoc.id, ...recipeDoc.data() } as any;
-          console.log('✅ Recipe found in Firestore:', userRecipe.title);
-          console.log('📋 Recipe tags from Firestore:', userRecipe.tags);
 
           // Check if user has permission to view this recipe
           const currentUser = auth.currentUser;
@@ -376,12 +361,7 @@ const RecipeDetailScreen: React.FC = () => {
           }
 
           // Convert to ExtendedRecipe format
-          const extendedRecipe = convertUserRecipeToExtended(userRecipe);
-          console.log('📋 Recipe tags from Firestore (raw):', userRecipe.tags);
-          console.log('📋 Recipe tags after conversion:', extendedRecipe.tags);
-          console.log('📋 Recipe tags length:', extendedRecipe.tags?.length);
-          console.log('📋 Recipe tags type:', typeof extendedRecipe.tags);
-          console.log('📋 Recipe tags is array:', Array.isArray(extendedRecipe.tags));
+          const extendedRecipe = convertUserRecipeToExtended(userRecipe); 
 
           // Update local store with tags from Firestore (source of truth)
           const { updateRecipe } = useRecipesStore.getState();
@@ -391,9 +371,10 @@ const RecipeDetailScreen: React.FC = () => {
           setRecipe(extendedRecipe);
           setIsLoading(false);
 
-          // Set servings from recipe if available
-          if (extendedRecipe.servings) {
-            setServings(extendedRecipe.servings);
+          // Set servings from recipe (e.g. from import in admin)
+          const s = extendedRecipe.servings;
+          if (s != null && Number(s) >= 1) {
+            setServings(Number(s));
           }
         } else {
           // Recipe doesn't exist in Firestore - remove it from local store if it's there
