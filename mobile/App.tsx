@@ -61,6 +61,7 @@ import SignUpScreen from './src/screens/onboarding/SignUpScreen';
 import EmailSignUpScreen from './src/screens/onboarding/EmailSignUpScreen';
 import LoginScreen from './src/screens/onboarding/LoginScreen';
 import EmailLoginScreen from './src/screens/onboarding/EmailLoginScreen';
+import PhoneLoginScreen from './src/screens/onboarding/PhoneLoginScreen';
 import CodeVerificationScreen from './src/screens/onboarding/CodeVerificationScreen';
 import NotificationIntroScreen from './src/screens/onboarding/NotificationIntroScreen';
 import NotificationPermissionScreen from './src/screens/onboarding/NotificationPermissionScreen';
@@ -311,6 +312,13 @@ function AppContent() {
                   <Stack.Screen
                     name="EmailLogin"
                     component={EmailLoginScreen}
+                    options={{
+                      contentStyle: { backgroundColor: '#FFFFFF' },
+                    }}
+                  />
+                  <Stack.Screen
+                    name="PhoneLogin"
+                    component={PhoneLoginScreen}
                     options={{
                       contentStyle: { backgroundColor: '#FFFFFF' },
                     }}

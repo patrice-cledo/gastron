@@ -11,9 +11,8 @@ import { getFirestore, connectFirestoreEmulator, Firestore } from 'firebase/fire
 import { getFunctions, connectFunctionsEmulator, Functions } from 'firebase/functions';
 import { getStorage, connectStorageEmulator, FirebaseStorage } from 'firebase/storage';
 
-// Firebase configuration
-// For emulator, we can use placeholder values
-const firebaseConfig = {
+// Firebase configuration (same fallbacks as rest of app; export for phone-auth WebView)
+export const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 'demo-api-key',
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || 'cookthispage.firebaseapp.com',
   projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || 'cookthispage',

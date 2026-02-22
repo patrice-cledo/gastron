@@ -14,6 +14,7 @@ export type RootStackParamList = {
   EmailSignUp: undefined;
   Login: undefined;
   EmailLogin: undefined;
+  PhoneLogin: { nextScreen?: 'Home' | 'NotificationIntro' } | undefined;
   CodeVerification: {
     email: string;
     firstName: string;

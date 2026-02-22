@@ -19,6 +19,10 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
     navigation.navigate('EmailLogin');
   };
 
+  const handlePhoneLogin = () => {
+    navigation.navigate('PhoneLogin');
+  };
+
   const handleGoogleLogin = () => {
     // TODO: Implement Google login
     console.log('Google login');
@@ -50,6 +54,15 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         >
           <Ionicons name="mail" size={20} color={theme.colors.black} />
           <Text style={[styles.emailButtonText, { color: theme.colors.black }]}>Continue with Email</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.socialButton}
+          onPress={handlePhoneLogin}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="call" size={20} color="#1A1A1A" />
+          <Text style={styles.socialButtonText}>Continue with Phone</Text>
         </TouchableOpacity>
 
         {/* OR Separator */}

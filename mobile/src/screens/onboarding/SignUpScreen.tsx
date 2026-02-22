@@ -19,6 +19,10 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
     navigation.navigate('EmailSignUp');
   };
 
+  const handlePhoneSignUp = () => {
+    navigation.navigate('PhoneLogin', { nextScreen: 'NotificationIntro' });
+  };
+
   const handleGoogleSignUp = () => {
     // TODO: Implement Google sign up
     navigation.navigate('Pricing');
@@ -50,6 +54,15 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
         >
           <Ionicons name="mail" size={20} color={theme.colors.black} />
           <Text style={[styles.emailButtonText, { color: theme.colors.black }]}>Continue with Email</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.socialButton}
+          onPress={handlePhoneSignUp}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="call" size={20} color="#1A1A1A" />
+          <Text style={styles.socialButtonText}>Continue with Phone</Text>
         </TouchableOpacity>
 
         {/* OR Separator */}

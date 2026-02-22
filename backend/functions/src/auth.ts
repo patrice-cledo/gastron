@@ -422,3 +422,34 @@ async function checkResendCooldown(
   const recent = recentChallenges.docs[0].data() as OtpChallenge;
   return recent;
 }
+
+/**
+ * Exchange a Firebase ID token (from phone sign-in in WebView) for a custom token
+ * so the React Native app can sign in with signInWithCustomToken.
+ */
+export const exchangePhoneIdTokenForCustomToken = onCall(
+  {
+    enforceAppCheck: false,
+    maxInstances: 10,
+  },
+  async (request) => {
+    const data = request.data as { idToken?: string };
+    const {idToken} = data;
+
+    if (!idToken || typeof idToken !== "string") {
+      throw new HttpsError("invalid-argument", "idToken is required");
+    }
+
+    try {
+      const decoded = await auth.verifyIdToken(idToken);
+      const customToken = await auth.createCustomToken(decoded.uid);
+      return {customToken};
+    } catch (error: unknown) {
+      const err = error as { code?: string; message?: string };
+      if (err.code === "auth/argument-error" || err.message?.includes("Decoding")) {
+        throw new HttpsError("invalid-argument", "Invalid or expired ID token");
+      }
+      throw new HttpsError("internal", "Failed to create session");
+    }
+  }
+);

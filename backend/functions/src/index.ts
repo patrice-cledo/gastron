@@ -64,7 +64,11 @@ import {recomputeGroceryList} from "../../shared/groceryListEngine";
 import {parseIngredientLine, generateCanonicalKey} from "../../shared/ingredientNormalizer";
 import {startRecipeImport, processRecipeImport} from "./recipeImport";
 import {parseRecipeFromText} from "../../shared/textRecipeParser";
-import {requestEmailOtp, verifyEmailOtp} from "./auth";
+import {
+  requestEmailOtp,
+  verifyEmailOtp,
+  exchangePhoneIdTokenForCustomToken,
+} from "./auth";
 
 interface RecomputeRequest {
   dateRangeStart: string;
@@ -594,7 +598,11 @@ export const classifyRecipeText = onCall(
 );
 
 // Export OTP authentication functions
-export {requestEmailOtp, verifyEmailOtp};
+export {
+  requestEmailOtp,
+  verifyEmailOtp,
+  exchangePhoneIdTokenForCustomToken,
+};
 
 // Export recipe management functions
 export {createRecipe, updateRecipe, markRecipeAsCooked} from "./recipes";
