@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>721390142342-8hjcgrmbs2gdmkivjsqli7c9mhfm84ss.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.721390142342-8hjcgrmbs2gdmkivjsqli7c9mhfm84ss</string>
+	<key>API_KEY</key>
+	<string>AIzaSyDv3sWLsoGdx1Dab5vqTsH8vCL1vRM6pBw</string>
+	<key>GCM_SENDER_ID</key>
+	<string>721390142342</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>us.tribecamp.gastron</string>
+	<key>PROJECT_ID</key>
+	<string>cookthispage</string>
+	<key>STORAGE_BUCKET</key>
+	<string>cookthispage.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:721390142342:ios:036e954a3d550ba6942207</string>
+</dict>
+</plist>

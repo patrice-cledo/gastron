@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "721390142342",
+    "project_id": "cookthispage",
+    "storage_bucket": "cookthispage.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:721390142342:android:a27395cabbef1b99942207",
+        "android_client_info": {
+          "package_name": "us.tribecamp.gastron"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "721390142342-3a2rbi8871ce5c2be2hb9ihh31btjglc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB5qQ_R7HbYmJEG-SBiRlSlEkci4UoNG-I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "721390142342-3a2rbi8871ce5c2be2hb9ihh31btjglc.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "721390142342-8hjcgrmbs2gdmkivjsqli7c9mhfm84ss.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "us.tribecamp.gastron"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

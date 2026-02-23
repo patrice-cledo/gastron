@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
 import {
@@ -21,7 +22,65 @@ export const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '1:123456789:web:abcdef',
 };
 
-// Initialize Firebase
+// Ensure React Native Firebase default app exists (required for @react-native-firebase/auth).
+// Native plist configures [DEFAULT] at launch; we must see it in getApps() before any initializeApp
+// (calling initializeApp when plist already did causes "already configured" and leaves JS registry empty).
+export const rnFirebaseReady: Promise<void> = (() => {
+  try {
+    const rnFirebaseApp = require('@react-native-firebase/app').default;
+    // Native SDK needs platform-specific app id (plist has iOS, google-services.json has Android).
+    const rnConfig = {
+      ...firebaseConfig,
+      databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`,
+      ...(Platform.OS === 'ios' && {
+        apiKey: process.env.EXPO_PUBLIC_FIREBASE_IOS_API_KEY || process.env.EXPO_PUBLIC_FIREBASE_API_KEY || 'AIzaSyDv3sWLsoGdx1Dab5vqTsH8vCL1vRM6pBw',
+        appId: process.env.EXPO_PUBLIC_FIREBASE_IOS_APP_ID || '1:721390142342:ios:036e954a3d550ba6942207',
+        messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_IOS_MESSAGING_SENDER_ID || '721390142342',
+      }),
+      ...(Platform.OS === 'android' && {
+        appId: process.env.EXPO_PUBLIC_FIREBASE_ANDROID_APP_ID || firebaseConfig.appId,
+        messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_ANDROID_MESSAGING_SENDER_ID || firebaseConfig.messagingSenderId,
+      }),
+    };
+    return (async () => {
+      const rnfAppMod = require('@react-native-firebase/app');
+      // Wait for native plist to register the default app so getApp() works (avoids calling initializeApp).
+      await new Promise((r) => setTimeout(r, 400));
+      for (let i = 0; i < 30; i++) {
+        try {
+          rnfAppMod.getApp();
+          return; // getApp() succeeded; [DEFAULT] is in the registry.
+        } catch {
+          // No app yet; keep waiting or will create below.
+        }
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      // No plist app found; create from JS with platform-specific config.
+      await rnFirebaseApp.initializeApp(rnConfig);
+      rnfAppMod.getApp(); // ensure it's in the registry
+    })().catch(async (e: unknown) => {
+      const msg = e && typeof e === 'object' && 'message' in e ? String((e as { message: string }).message) : '';
+      if (msg.includes('already exists') || msg.includes('already been configured')) {
+        // Native plist already configured the app; give JS a moment to see it, then verify.
+        const rnfAppMod = require('@react-native-firebase/app');
+        for (let j = 0; j < 10; j++) {
+          await new Promise((r) => setTimeout(r, 100));
+          try {
+            rnfAppMod.getApp();
+            return;
+          } catch {
+            /* retry */
+          }
+        }
+      }
+      throw e;
+    });
+  } catch {
+    return Promise.resolve();
+  }
+})();
+
+// Initialize Firebase (JS SDK)
 let app: FirebaseApp;
 if (getApps().length === 0) {
   app = initializeApp(firebaseConfig);

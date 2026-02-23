@@ -29,7 +29,15 @@
               "NSExceptionAllowsInsecureHTTPLoads": true
             }
           }
-        }
+        },
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.721390142342-8hjcgrmbs2gdmkivjsqli7c9mhfm84ss",
+              "gastrons"
+            ]
+          }
+        ]
       },
       "googleServicesFile": "./GoogleService-Info.plist"
     },

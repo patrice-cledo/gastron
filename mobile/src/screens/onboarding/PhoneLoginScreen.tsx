@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -13,16 +14,21 @@ import { CommonActions, useRoute, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../types/navigation';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeProvider';
-import { auth, functions } from '../../services/firebase';
+import { auth, functions, rnFirebaseReady } from '../../services/firebase';
 import { httpsCallable } from 'firebase/functions';
 import { signInWithCustomToken } from 'firebase/auth';
 
-let nativeFirebaseAuth: ReturnType<typeof require> | null = null;
+// Retrieve Native Firebase methods gracefully
+let rnfAppMod: any = null;
+let rnfAuthMod: any = null;
 try {
-  nativeFirebaseAuth = require('@react-native-firebase/auth').default;
+  rnfAppMod = require('@react-native-firebase/app').default || require('@react-native-firebase/app');
+  rnfAuthMod = require('@react-native-firebase/auth').default || require('@react-native-firebase/auth');
 } catch {
-  nativeFirebaseAuth = null;
+  // Expo Go or native module not linked
 }
+const hasNativeAuth = Boolean(rnfAppMod && rnfAuthMod);
+
 
 type PhoneLoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'PhoneLogin'>;
 
@@ -48,7 +54,13 @@ const PhoneLoginScreen: React.FC<PhoneLoginScreenProps> = ({ navigation }) => {
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rnfReady, setRnfReady] = useState(false);
   const confirmationRef = useRef<{ confirm: (code: string) => Promise<unknown> } | null>(null);
+
+  useEffect(() => {
+    if (!hasNativeAuth) return;
+    rnFirebaseReady.then(() => setRnfReady(true)).catch(() => setRnfReady(false));
+  }, []);
 
   const handleSendCode = useCallback(async () => {
     setError(null);
@@ -57,7 +69,7 @@ const PhoneLoginScreen: React.FC<PhoneLoginScreenProps> = ({ navigation }) => {
       setError('Enter a valid phone number (e.g. +1 650 555 1234)');
       return;
     }
-    if (!nativeFirebaseAuth) {
+    if (!hasNativeAuth) {
       setError(
         'Phone sign-in requires a development build. Run: npx expo run:ios (or run:android).'
       );
@@ -65,7 +77,28 @@ const PhoneLoginScreen: React.FC<PhoneLoginScreenProps> = ({ navigation }) => {
     }
     setLoading(true);
     try {
-      const confirmation = await nativeFirebaseAuth().signInWithPhoneNumber(normalized);
+      await rnFirebaseReady;
+
+      let nativeApp;
+      try {
+        nativeApp = rnfAppMod.app();
+      } catch (e: any) {
+        // Fallback or explicit init if somehow lost
+        if (e?.message?.includes('No Firebase App')) {
+          const { firebaseConfig } = require('../../services/firebase');
+          nativeApp = rnfAppMod.initializeApp(firebaseConfig);
+        } else {
+          throw e;
+        }
+      }
+
+      const authInstance = rnfAuthMod(nativeApp);
+      // Disable app verification on development simulators to avoid ReCAPTCHA fallback crashes
+      if (__DEV__) {
+        authInstance.settings.appVerificationDisabledForTesting = true;
+      }
+
+      const confirmation = await authInstance.signInWithPhoneNumber(normalized);
       confirmationRef.current = confirmation;
       setStep('code');
       setError(null);
@@ -91,7 +124,11 @@ const PhoneLoginScreen: React.FC<PhoneLoginScreenProps> = ({ navigation }) => {
         const result = await exchange({ idToken });
         const customToken = result.data.customToken;
         await signInWithCustomToken(auth, customToken);
-        if (nativeFirebaseAuth) nativeFirebaseAuth().signOut();
+        if (rnfAuthMod) {
+          try {
+            await rnfAuthMod().signOut();
+          } catch (e) { }
+        }
         setLoading(false);
         navigation.dispatch(
           CommonActions.reset({ index: 0, routes: [{ name: nextScreen }] })
@@ -108,6 +145,7 @@ const PhoneLoginScreen: React.FC<PhoneLoginScreenProps> = ({ navigation }) => {
   );
 
   const handleVerifyCode = useCallback(async () => {
+    Keyboard.dismiss();
     const codeString = code.join('');
     if (codeString.length !== 6) {
       setError('Enter the 6-digit code');
@@ -122,7 +160,8 @@ const PhoneLoginScreen: React.FC<PhoneLoginScreenProps> = ({ navigation }) => {
     setLoading(true);
     try {
       await confirmation.confirm(codeString);
-      const idToken = await nativeFirebaseAuth!().currentUser?.getIdToken();
+      const authInstance = rnfAuthMod();
+      const idToken = await authInstance.currentUser?.getIdToken();
       if (!idToken) {
         setError('Could not get session. Try again.');
         setLoading(false);
@@ -149,7 +188,7 @@ const PhoneLoginScreen: React.FC<PhoneLoginScreenProps> = ({ navigation }) => {
     }
   };
 
-  if (!nativeFirebaseAuth) {
+  if (!hasNativeAuth) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors?.background || '#FFFFFF' }]}>
         <View style={styles.header}>
@@ -203,10 +242,12 @@ const PhoneLoginScreen: React.FC<PhoneLoginScreenProps> = ({ navigation }) => {
             <TouchableOpacity
               style={[styles.primaryButton, { backgroundColor: theme.colors?.gastronButton || '#E0EB60' }]}
               onPress={handleSendCode}
-              disabled={loading}
+              disabled={loading || (hasNativeAuth && !rnfReady)}
               activeOpacity={0.8}
             >
               {loading ? (
+                <ActivityIndicator color="#1E293B" />
+              ) : hasNativeAuth && !rnfReady ? (
                 <ActivityIndicator color="#1E293B" />
               ) : (
                 <>
